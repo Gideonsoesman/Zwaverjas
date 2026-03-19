@@ -360,6 +360,7 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
     <div class="chat-head">
       <span>Chat</span>
       <div class="chat-btns">
+        <button class="chat-btn" id="unmute-btn" onclick="unmuteAll()" style="background:rgba(74,222,128,.15);border-color:var(--green);color:var(--green)">🔊 Geluid aan</button>
         <button class="chat-btn purple" id="btn-swap" style="display:none" onclick="requestSwap()">Wissel</button>
         <button class="chat-btn red" onclick="leaveGame()">Verlaat spel</button>
       </div>
@@ -766,6 +767,7 @@ async function autoJoinLobby(){
     lobby=newLobby;
     seatMap={[ME]:0};mySeat=0;isHost=true;
   }
+  debugMsg('Lobby: host='+lobby.host+' players='+Object.keys(lobby.players||{}).join(',')+' mySeat='+mySeat);
   showGame();
 }
 
@@ -1481,7 +1483,22 @@ function setRemoteVideo(playerId,stream){
   if(slot<0)return;
   const vid=document.querySelector(`#vbox-${slot} video`);
   const fb=document.getElementById('vfb-'+slot);
-  if(vid){vid.srcObject=stream;vid.play().catch(()=>{});if(fb)fb.style.display='none';}
+  if(vid){
+    vid.srcObject=stream;
+    vid.muted=true; // start muted so autoplay works on mobile
+    vid.play().catch(()=>{});
+    if(fb)fb.style.display='none';
+  }
+}
+// Unmute all remote videos (called from user gesture)
+function unmuteAll(){
+  for(let i=1;i<5;i++){
+    const vid=document.querySelector('#vbox-'+i+' video');
+    if(vid&&vid.srcObject)vid.muted=false;
+  }
+  const btn=document.getElementById('unmute-btn');
+  if(btn)btn.style.display='none';
+  debugMsg('Audio unmuted');
 }
 
 function visualSlot(pid){
@@ -1531,7 +1548,7 @@ function buildVideoStrip(){
     const teamLbl=isWaitingSlot?'Wacht':(realSeat%2===0?'N-Z':'O-W');
     const teamCls=isWaitingSlot?'t-wait':(realSeat%2===0?'t-ns':'t-ew');
     const div=document.createElement('div');div.className='vbox';div.id='vbox-'+slot;
-    div.innerHTML=`<video autoplay ${slot===0?'muted':''} playsinline></video>
+    div.innerHTML=`<video autoplay muted playsinline></video>
       <div class="vfb" id="vfb-${slot}">
         ${p?`<img src="${PHOTOS[p.id]}" alt="${p.name}"><span class="vfb-name">${p.name}</span>`:'<span style="color:rgba(245,234,208,.2);font-size:.65em">'+(isWaitingSlot?'Wachtkamer':'Leeg')+'</span>'}
       </div>
