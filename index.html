@@ -626,6 +626,9 @@ let presTimer=null;
 let processedActions=new Set();
 let lastChatTs=0;
 let pendingSwap=null; // {from, to}
+let lastVideoStripKey='';
+let _gettingStream=null; // mutex for getLocalStream
+let pendingPeers=new Set(); // prevent concurrent call/answer for same peer
 
 // ════════════════════════════════════════════════
 // LOGIN UI
@@ -723,15 +726,85 @@ async function pickPlayer(id){
   document.getElementById('ls-game-info').style.display='block';
   try{await fbSet('/test',{ts:Date.now()});await fbDel('/test');}
   catch(e){showError('Firebase-schrijftoegang mislukt.');ME='';return;}
+  setBar('Online melden...');
   await writePresence();
   presTimer=setInterval(writePresence,15000);
   window.addEventListener('beforeunload',()=>fbSet('/presence/'+ME,{ts:Date.now(),online:false}));
   startStream();
-  setBar('Verbonden! Wacht op vrienden...');
-  // Auto-join video for anyone online
-  setTimeout(()=>initVideoForLobby(),1000);
+  setBar('Lobby joinen...');
+  try{await autoJoinLobby();}
+  catch(e){showError('Fout bij lobby: '+e.message);console.error('autoJoinLobby error:',e);}
 }
 async function writePresence(){if(ME)await fbSet('/presence/'+ME,{ts:Date.now(),online:true});}
+
+// Auto-create or join existing lobby, then show game room
+async function autoJoinLobby(){
+  // Clear stale signaling data for this player (from previous sessions)
+  try{const oldSig=await fbGet('/sig');
+    if(oldSig&&typeof oldSig==='object'){for(const key of Object.keys(oldSig)){if(key.includes(ME))await fbDel('/sig/'+key);}}
+  }catch(e){console.warn('sig cleanup failed:',e);}
+  const existing=await fbGet('/lobby');
+  if(existing&&existing.players){
+    // Lobby exists — join it
+    const playing=Object.entries(existing.players).filter(([,s])=>s==='playing').map(([id])=>id);
+    if(playing.includes(ME)){
+      // Already in lobby
+      lobby=existing;seatMap=existing.seats||{};mySeat=seatMap[ME]??-1;
+    }else if(playing.length<4){
+      // Join as player
+      const takenSeats=Object.values(existing.seats||{});
+      let seat=0;while(takenSeats.includes(seat))seat++;
+      await fbPatch('/lobby/players',{[ME]:'playing'});
+      await fbPatch('/lobby/seats',{[ME]:seat});
+      // Set lobby locally so showGame/initVideo can use it immediately
+      lobby={...existing,players:{...existing.players,[ME]:'playing'},seats:{...(existing.seats||{}),[ME]:seat}};
+      seatMap=lobby.seats;mySeat=seat;
+    }else{
+      // Full — join as waiting
+      await fbPatch('/lobby/players',{[ME]:'waiting'});
+      lobby={...existing,players:{...existing.players,[ME]:'waiting'}};
+      seatMap=existing.seats||{};mySeat=-1;
+    }
+  }else{
+    // No lobby — create one with just me
+    const newLobby={host:ME,status:'waiting_players',players:{[ME]:'playing'},seats:{[ME]:0},
+      sessionScores:existing?.sessionScores||{},startedAt:Date.now()};
+    await fbSet('/lobby',newLobby);
+    lobby=newLobby;
+    seatMap={[ME]:0};mySeat=0;isHost=true;
+  }
+  showGame();
+}
+
+// When presence changes, auto-add newly online players to lobby
+async function onPresenceChange(){
+  if(!ME||!lobby)return;
+  // Start camera when 2+ players are in lobby
+  const lobbyPlayers=Object.keys(lobby.players||{});
+  if(lobbyPlayers.length>=2&&!myStream){initVideoForLobby();}
+  else if(myStream){connectVideoToAll();}
+  // If I'm host and there's no active game, auto-add online players to lobby
+  if(!isHost)return;
+  if(gs&&gs.phase&&gs.phase!=='ended')return; // game in progress, don't auto-add
+  const now=Date.now();
+  const currentPlayers=Object.keys(lobby.players||{});
+  for(const p of ROSTER){
+    if(currentPlayers.includes(p.id))continue;
+    const pr=presence[p.id];
+    if(pr&&pr.online&&(now-pr.ts)<45000){
+      // New online player — auto-add to lobby
+      const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
+      if(playing.length<4){
+        const takenSeats=Object.values(lobby.seats||{});
+        let seat=0;while(takenSeats.includes(seat))seat++;
+        await fbPatch('/lobby/players',{[p.id]:'playing'});
+        await fbPatch('/lobby/seats',{[p.id]:seat});
+      }else{
+        await fbPatch('/lobby/players',{[p.id]:'waiting'});
+      }
+    }
+  }
+}
 
 // ════════════════════════════════════════════════
 // FIREBASE STREAM
@@ -755,7 +828,7 @@ function deepMerge(obj,path,val){if(path==='/'||path===''){if(val&&typeof val===
 
 function onUpdate(data){
   if(!data)return;
-  if(data.presence){presence=data.presence;updateGrid();}
+  if(data.presence){presence=data.presence;updateGrid();onPresenceChange();}
   if(data.lobby){lobby=data.lobby;updateLobbyUI();updateGrid();handleLobbyChange();}
   if(data.game){
     gs=data.game;seatMap=gs.seats||{};mySeat=seatMap[ME]??-1;
@@ -778,13 +851,62 @@ function handleLobbyChange(){
   if(btn){
     btn.style.display=(myStatus==='playing'&&waitingPlayers.length>0)||(myStatus==='waiting')?'inline-block':'none';
   }
-  // Auto-connect video for all lobby participants (playing + waiting)
-  connectVideoToAll();
+  // Update seats
+  if(lobby){seatMap=lobby.seats||{};mySeat=seatMap[ME]??-1;}
+  // Only rebuild video strip when the player list actually changes
+  if(document.getElementById('screen-game').style.display==='grid'){
+    const newKey=JSON.stringify(lobby?.players||{})+'|'+JSON.stringify(lobby?.seats||{});
+    if(newKey!==lastVideoStripKey){
+      lastVideoStripKey=newKey;
+      buildVideoStrip();showSelfVideo();
+      for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
+    }
+    updateWaitingUI();
+  }
+  // Start camera if 2+ players and not yet started, then connect
+  const lobbyCount=Object.keys(lobby?.players||{}).length;
+  if(lobbyCount>=2&&!myStream){initVideoForLobby();}
+  else if(myStream){connectVideoToAll();}
+}
+
+// Show waiting-for-players UI or start button when enough players
+function updateWaitingUI(){
+  const players=lobby?.players||{};
+  const playing=Object.entries(players).filter(([,s])=>s==='playing').map(([id])=>id);
+  const bar=document.getElementById('turn-bar');
+  if(!bar)return;
+  const gameActive=gs&&gs.phase&&gs.phase!=='ended';
+  if(!gameActive){
+    if(playing.length<4){
+      bar.textContent='Wachten op spelers... ('+playing.length+'/4) — Chat alvast!';
+    }else{
+      bar.innerHTML='<button class="btn-gold" onclick="startGameFromRoom()" style="animation:none;padding:8px 24px;font-size:.9em">Start het spel! (4 spelers klaar)</button>';
+    }
+  }
 }
 
 // ════════════════════════════════════════════════
 // LOBBY MANAGEMENT
 // ════════════════════════════════════════════════
+async function startGameFromRoom(){
+  if(!ME||!lobby)return;
+  const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
+  if(playing.length<4){document.getElementById('turn-bar').textContent='Nog niet genoeg spelers ('+playing.length+'/4)';return;}
+  // Use existing seats from lobby
+  const seats=lobby.seats||{};
+  seatMap=seats;mySeat=seats[ME]??-1;
+  await fbPatch('/lobby',{status:'playing',host:ME});
+  await fbSet('/game',mkState(0,seats));
+  await fbSet('/actions',null);
+  await fbSet('/continueVotes',null);
+  processedActions.clear();
+  isHost=true;
+  await pushChat('Spel','Spel gestart door '+nameOf(ME)+'!');
+  buildVideoStrip();showSelfVideo();
+  for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
+  renderGame();
+}
+
 async function startGame(){
   if(!ME){setBar('Kies eerst een speler!');return;}
   // Lock: check if game already active
@@ -1181,22 +1303,27 @@ function isCaller(other){return ME<other;}
 
 async function getLocalStream(){
   if(myStream)return myStream;
-  try{myStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});}
-  catch(e){
-    try{myStream=await navigator.mediaDevices.getUserMedia({audio:true});}
-    catch(e2){myStream=null;}
-  }
-  return myStream;
+  if(_gettingStream)return _gettingStream;
+  _gettingStream=(async()=>{
+    try{myStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320},height:{ideal:240}},audio:{echoCancellation:true,noiseSuppression:true}});}
+    catch(e){
+      try{myStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
+      catch(e2){myStream=null;}
+    }
+    _gettingStream=null;
+    return myStream;
+  })();
+  return _gettingStream;
 }
 
-// Initialize video for lobby (before game starts)
+// Initialize video for lobby (get camera + connect)
 async function initVideoForLobby(){
   await getLocalStream();
   showSelfVideo();
+  connectVideoToAll();
 }
 
 function showSelfVideo(){
-  // Show self in video slot 0 if game screen is visible
   const vid=document.querySelector('#vbox-0 video');
   if(vid&&myStream){vid.srcObject=myStream;vid.muted=true;vid.play().catch(()=>{});
     const fb=document.getElementById('vfb-0');if(fb)fb.style.display='none';}
@@ -1204,12 +1331,19 @@ function showSelfVideo(){
 
 async function connectVideoToAll(){
   if(!ME||!myStream)return;
-  // Get all online players (both playing and waiting)
+  // Get all online players (from lobby if active, otherwise from presence)
   const allPlayers=[];
   if(lobby?.players){
     for(const[id,status]of Object.entries(lobby.players)){
       if(id!==ME&&(status==='playing'||status==='waiting'))allPlayers.push(id);
     }
+  }
+  // Also connect to any online player detected via presence (pre-lobby)
+  const now=Date.now();
+  for(const p of ROSTER){
+    if(p.id===ME||allPlayers.includes(p.id))continue;
+    const pr=presence[p.id];
+    if(pr&&pr.online&&(now-pr.ts)<45000)allPlayers.push(p.id);
   }
   // Connect to each one we're not already connected to
   for(const otherId of allPlayers){
@@ -1230,52 +1364,57 @@ async function connectVideoToAll(){
 }
 
 async function callPlayer(otherId){
-  if(peerConns[otherId])return;
-  const pc=new RTCPeerConnection({iceServers:ICE});
-  peerConns[otherId]=pc;
-  setupPeerHandlers(pc,otherId);
-  if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
-  const key=sigKey(ME,otherId);
-  // Trickle ICE: send candidates individually
-  const candidates=[];
-  pc.onicecandidate=e=>{
-    if(e.candidate)candidates.push(e.candidate.toJSON());
-  };
-  const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
-  await pc.setLocalDescription(offer);
-  // Wait for ICE gathering (max 4s)
-  await new Promise(r=>{
-    if(pc.iceGatheringState==='complete'){r();return;}
-    const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
-    pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
-  });
-  await fbSet('/sig/'+key+'/offer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
+  if(peerConns[otherId]||pendingPeers.has(otherId))return;
+  pendingPeers.add(otherId);
+  try{
+    const key=sigKey(ME,otherId);
+    await fbDel('/sig/'+key);
+    const pc=new RTCPeerConnection({iceServers:ICE});
+    peerConns[otherId]=pc;
+    setupPeerHandlers(pc,otherId);
+    if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
+    const candidates=[];
+    pc.onicecandidate=e=>{if(e.candidate)candidates.push(e.candidate.toJSON());};
+    const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
+    await pc.setLocalDescription(offer);
+    await new Promise(r=>{
+      if(pc.iceGatheringState==='complete'){r();return;}
+      const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
+      pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
+    });
+    await fbSet('/sig/'+key+'/offer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
+  }catch(e){console.error('callPlayer failed:',otherId,e);delete peerConns[otherId];}
+  finally{pendingPeers.delete(otherId);}
 }
 
 async function answerCall(otherId,offerData){
-  if(peerConns[otherId])return;
-  const pc=new RTCPeerConnection({iceServers:ICE});
-  peerConns[otherId]=pc;
-  setupPeerHandlers(pc,otherId);
-  if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
-  await pc.setRemoteDescription(new RTCSessionDescription({sdp:offerData.sdp,type:offerData.type}));
-  // Add remote ICE candidates
-  if(offerData.candidates){
-    for(const c of offerData.candidates){
-      try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+  if(peerConns[otherId]||pendingPeers.has(otherId))return;
+  pendingPeers.add(otherId);
+  try{
+    if(!myStream)await getLocalStream();
+    const pc=new RTCPeerConnection({iceServers:ICE});
+    peerConns[otherId]=pc;
+    setupPeerHandlers(pc,otherId);
+    if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
+    await pc.setRemoteDescription(new RTCSessionDescription({sdp:offerData.sdp,type:offerData.type}));
+    if(offerData.candidates){
+      for(const c of offerData.candidates){
+        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+      }
     }
-  }
-  const candidates=[];
-  pc.onicecandidate=e=>{if(e.candidate)candidates.push(e.candidate.toJSON());};
-  const answer=await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  await new Promise(r=>{
-    if(pc.iceGatheringState==='complete'){r();return;}
-    const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
-    pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
-  });
-  const key=sigKey(ME,otherId);
-  await fbSet('/sig/'+key+'/answer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
+    const candidates=[];
+    pc.onicecandidate=e=>{if(e.candidate)candidates.push(e.candidate.toJSON());};
+    const answer=await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await new Promise(r=>{
+      if(pc.iceGatheringState==='complete'){r();return;}
+      const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
+      pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
+    });
+    const key=sigKey(ME,otherId);
+    await fbSet('/sig/'+key+'/answer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
+  }catch(e){console.error('answerCall failed:',otherId,e);delete peerConns[otherId];}
+  finally{pendingPeers.delete(otherId);}
 }
 
 function setupPeerHandlers(pc,otherId){
@@ -1283,9 +1422,11 @@ function setupPeerHandlers(pc,otherId){
   pc.onconnectionstatechange=()=>{
     const s=pc.connectionState;
     if(s==='disconnected'||s==='failed'||s==='closed'){
-      delete peerConns[otherId];delete remoteStreams[otherId];
-      // Retry after delay
-      setTimeout(()=>{if(ME)connectVideoToAll();},2000);
+      // Only clean up if this is still the active connection (not an orphaned one)
+      if(peerConns[otherId]===pc){
+        delete peerConns[otherId];delete remoteStreams[otherId];
+        setTimeout(()=>{if(ME)connectVideoToAll();},2000);
+      }else{try{pc.close();}catch(e){}}
     }
   };
 }
@@ -1297,7 +1438,7 @@ async function processSigData(sig){
     const parts=key.split('__');
     if(!parts.includes(ME))continue;
     const otherId=parts[0]===ME?parts[1]:parts[0];
-    if(pair.offer&&pair.offer.from===otherId&&!peerConns[otherId]&&!isCaller(otherId)){
+    if(pair.offer&&pair.offer.from===otherId&&pair.offer.sdp&&!peerConns[otherId]&&!isCaller(otherId)){
       await answerCall(otherId,pair.offer);
     }
     if(pair.answer&&pair.answer.from===otherId&&peerConns[otherId]&&!peerConns[otherId]._gotAnswer&&isCaller(otherId)){
@@ -1313,10 +1454,16 @@ async function processSigData(sig){
 }
 
 async function initVideo(){
-  await getLocalStream();
-  showSelfVideo();
-  // Don't wipe signaling — just connect to new peers
-  connectVideoToAll();
+  // Only request camera when 2+ players are in lobby (avoids triggering Zoom notetaker etc.)
+  const lobbyPlayers=Object.keys(lobby?.players||{});
+  if(lobbyPlayers.length>=2){
+    await getLocalStream();
+    showSelfVideo();
+  }
+  // Re-apply any remote streams that were connected before the game screen opened
+  for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
+  // Connect to new peers
+  if(myStream)connectVideoToAll();
 }
 
 function setRemoteVideo(playerId,stream){
@@ -1348,7 +1495,8 @@ async function showGame(){
   checkHost();
   buildVideoStrip();
   await initVideo();
-  if(gs)renderGame();
+  if(gs&&gs.phase&&gs.phase!=='ended')renderGame();
+  else updateWaitingUI();
 }
 
 // ════════════════════════════════════════════════
