@@ -1318,7 +1318,9 @@ async function getLocalStream(){
 
 // Initialize video for lobby (get camera + connect)
 async function initVideoForLobby(){
+  debugMsg('initVideoForLobby: getting camera...');
   await getLocalStream();
+  debugMsg('initVideoForLobby: camera '+(myStream?'OK':'FAILED'));
   showSelfVideo();
   connectVideoToAll();
 }
@@ -1345,12 +1347,13 @@ async function connectVideoToAll(){
     const pr=presence[p.id];
     if(pr&&pr.online&&(now-pr.ts)<45000)allPlayers.push(p.id);
   }
+  debugMsg('connectVideoToAll: peers='+allPlayers.join(','));
   // Connect to each one we're not already connected to
   for(const otherId of allPlayers){
     if(peerConns[otherId]){
       const state=peerConns[otherId].connectionState||peerConns[otherId].iceConnectionState;
+      debugMsg('peer '+otherId+' state='+state);
       if(state==='connected'||state==='completed')continue;
-      // If failed or closed, clean up and retry
       if(state==='failed'||state==='closed'||state==='disconnected'){
         peerConns[otherId].close();
         delete peerConns[otherId];
@@ -1358,7 +1361,10 @@ async function connectVideoToAll(){
       }else continue;
     }
     if(isCaller(otherId)){
+      debugMsg('I am caller for '+otherId+', scheduling call...');
       setTimeout(()=>callPlayer(otherId),300+Math.random()*600);
+    }else{
+      debugMsg('I am answerer for '+otherId+', waiting for offer...');
     }
   }
 }
@@ -1367,6 +1373,7 @@ async function callPlayer(otherId){
   if(peerConns[otherId]||pendingPeers.has(otherId))return;
   pendingPeers.add(otherId);
   try{
+    debugMsg('callPlayer '+otherId+': creating offer...');
     const key=sigKey(ME,otherId);
     await fbDel('/sig/'+key);
     const pc=new RTCPeerConnection({iceServers:ICE});
@@ -1382,8 +1389,10 @@ async function callPlayer(otherId){
       const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
       pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
     });
+    debugMsg('callPlayer '+otherId+': offer ready, '+candidates.length+' ICE candidates, writing to Firebase...');
     await fbSet('/sig/'+key+'/offer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
-  }catch(e){console.error('callPlayer failed:',otherId,e);delete peerConns[otherId];}
+    debugMsg('callPlayer '+otherId+': offer sent!');
+  }catch(e){debugMsg('callPlayer FAILED: '+otherId+' '+e.message);delete peerConns[otherId];}
   finally{pendingPeers.delete(otherId);}
 }
 
@@ -1391,6 +1400,7 @@ async function answerCall(otherId,offerData){
   if(peerConns[otherId]||pendingPeers.has(otherId))return;
   pendingPeers.add(otherId);
   try{
+    debugMsg('answerCall '+otherId+': answering...');
     if(!myStream)await getLocalStream();
     const pc=new RTCPeerConnection({iceServers:ICE});
     peerConns[otherId]=pc;
@@ -1412,15 +1422,17 @@ async function answerCall(otherId,offerData){
       pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
     });
     const key=sigKey(ME,otherId);
+    debugMsg('answerCall '+otherId+': answer ready, '+candidates.length+' ICE, writing...');
     await fbSet('/sig/'+key+'/answer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
-  }catch(e){console.error('answerCall failed:',otherId,e);delete peerConns[otherId];}
+    debugMsg('answerCall '+otherId+': answer sent!');
+  }catch(e){debugMsg('answerCall FAILED: '+otherId+' '+e.message);delete peerConns[otherId];}
   finally{pendingPeers.delete(otherId);}
 }
 
 function setupPeerHandlers(pc,otherId){
-  pc.ontrack=e=>{remoteStreams[otherId]=e.streams[0];setRemoteVideo(otherId,e.streams[0]);};
+  pc.ontrack=e=>{debugMsg('ontrack from '+otherId+'!');remoteStreams[otherId]=e.streams[0];setRemoteVideo(otherId,e.streams[0]);};
   pc.onconnectionstatechange=()=>{
-    const s=pc.connectionState;
+    const s=pc.connectionState;debugMsg('peer '+otherId+' → '+s);
     if(s==='disconnected'||s==='failed'||s==='closed'){
       // Only clean up if this is still the active connection (not an orphaned one)
       if(peerConns[otherId]===pc){
@@ -1438,10 +1450,14 @@ async function processSigData(sig){
     const parts=key.split('__');
     if(!parts.includes(ME))continue;
     const otherId=parts[0]===ME?parts[1]:parts[0];
-    if(pair.offer&&pair.offer.from===otherId&&pair.offer.sdp&&!peerConns[otherId]&&!isCaller(otherId)){
-      await answerCall(otherId,pair.offer);
+    if(pair.offer&&pair.offer.from===otherId&&pair.offer.sdp){
+      if(!peerConns[otherId]&&!pendingPeers.has(otherId)&&!isCaller(otherId)){
+        debugMsg('processSig: got offer from '+otherId+', answering...');
+        await answerCall(otherId,pair.offer);
+      }
     }
     if(pair.answer&&pair.answer.from===otherId&&peerConns[otherId]&&!peerConns[otherId]._gotAnswer&&isCaller(otherId)){
+      debugMsg('processSig: got answer from '+otherId);
       peerConns[otherId]._gotAnswer=true;
       await peerConns[otherId].setRemoteDescription(new RTCSessionDescription({sdp:pair.answer.sdp,type:pair.answer.type}));
       if(pair.answer.candidates){
@@ -1467,7 +1483,9 @@ async function initVideo(){
 }
 
 function setRemoteVideo(playerId,stream){
-  const slot=visualSlot(playerId);if(slot<0)return;
+  const slot=visualSlot(playerId);
+  debugMsg('setRemoteVideo '+playerId+' → slot '+slot);
+  if(slot<0)return;
   const vid=document.querySelector(`#vbox-${slot} video`);
   const fb=document.getElementById('vfb-'+slot);
   if(vid){vid.srcObject=stream;vid.play().catch(()=>{});if(fb)fb.style.display='none';}
@@ -1739,6 +1757,12 @@ function renderChatData(chatObj){
 }
 function sendChat(){const inp=document.getElementById('chat-inp');const t=inp.value.trim();if(!t||!ME)return;pushChat(nameOf(ME),t);inp.value='';}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function debugMsg(msg){
+  console.log('[ZW]',msg);
+  const box=document.getElementById('chat-msgs');if(!box)return;
+  const d=document.createElement('div');d.className='cmsg cmsg-sys';
+  d.textContent='[dbg] '+msg;box.appendChild(d);box.scrollTop=box.scrollHeight;
+}
 
 // ════════════════════════════════════════════════
 // RESET
