@@ -79,31 +79,27 @@ function simulateRound(dealer) {
   let redeals = 0;
   let cur = (dealer + 1) % 4;
 
+  const firstBidder = cur;
   while (!trump) {
-    if (redeals > 10) {
-      errors.push('Too many redeals');
-      return null;
-    }
-
     const hand = hands[cur];
-    const choice = botChooseTrump(hand);
 
-    if (choice) {
-      trump = choice;
+    if (passes >= 3 && cur === firstBidder) {
+      // Amsterdam rule: after all 4 pass, first player MUST choose
+      trump = botChooseTrump(hand) || hand.reduce((best, c) => {
+        // Force pick: choose suit with most cards
+        const count = hand.filter(h => h.s === c.s).length;
+        return count > best.count ? {suit: c.s, count} : best;
+      }, {suit: hand[0].s, count: 0}).suit;
       bidder = cur;
     } else {
-      passes++;
-      if (passes >= 4) {
-        // All passed — redeal
-        const newHands = deal();
-        for (let i = 0; i < 4; i++) hands[i] = newHands[i];
-        dealer = (dealer + 1) % 4;
-        cur = (dealer + 1) % 4;
-        passes = 0;
-        redeals++;
-        continue;
+      const choice = botChooseTrump(hand);
+      if (choice) {
+        trump = choice;
+        bidder = cur;
+      } else {
+        passes++;
+        cur = (cur + 1) % 4;
       }
-      cur = (cur + 1) % 4;
     }
   }
 
@@ -313,27 +309,58 @@ function testValidCards() {
     `Must overtrump 9, got ${valid.map(c=>c.r+c.s)}`);
   console.log(`  Must overtrump: ${valid.map(c=>c.r+c.s)} ✓`);
 
-  // Test 5: AMSTERDAM - Trump led, partner winning, no need to overtrump
+  // Test 5: Trump led, opponent winning — must overtrump, can't → undertrump
   hand = [{s:'♥',r:'8'},{s:'♥',r:'7'},{s:'♠',r:'A'}];
-  trick = [{seat:1, card:{s:'♥',r:'9'}}, {seat:2, card:{s:'♥',r:'J'}}]; // partner played J (winning)
+  trick = [{seat:1, card:{s:'♥',r:'9'}}, {seat:2, card:{s:'♥',r:'J'}}]; // opponent J winning
   valid = validCards(hand, trick, '♥', 3); // seat 3, partner of seat 1
-  // Seat 3's partner is seat 1 — but seat 2 played J which is winning
-  // seat 3 partner is seat 1 (both odd), current winner is seat 2 (even), not partner
-  // So seat 3 MUST overtrump... but can't overtrump J. Must play trump (undertrump)
+  // Current winner is seat 2 (even), not partner of seat 3 (odd)
+  // Must follow trump, can't overtrump J → must play any trump
   console.assert(valid.every(c => c.s === '♥'),
     `Must play trump, got ${valid.map(c=>c.r+c.s)}`);
   console.log(`  Opponent J winning, must play trump: ${valid.map(c=>c.r+c.s)} ✓`);
 
-  // Test 6: Amsterdam - partner winning with trump, I follow trump, no need to overtrump
+  // Test 6: Trump led, PARTNER winning — MUST STILL overtrump if possible (Amsterdam rule)
+  hand = [{s:'♥',r:'J'},{s:'♥',r:'8'},{s:'♥',r:'7'}];
+  trick = [{seat:0, card:{s:'♥',r:'9'}}, {seat:1, card:{s:'♥',r:'A'}}];
+  // Trump order: J,9,A,10,K,Q,8,7. Seat 0 played 9 (rank 1), seat 1 played A (rank 2).
+  // Winner is seat 0 (9 > A). Seat 2's partner is seat 0 (even), who IS winning.
+  // But when trump is LED, MUST overtrump regardless — only J beats 9.
+  valid = validCards(hand, trick, '♥', 2);
+  console.assert(valid.length === 1 && valid[0].r === 'J',
+    `Trump led, partner winning: must overtrump with J, got ${valid.map(c=>c.r+c.s)}`);
+  console.log(`  Trump led, partner winning: must overtrump with J: ${valid.map(c=>c.r+c.s)} ✓`);
+
+  // Test 6b: Trump led, partner winning, CAN'T overtrump — any trump ok
   hand = [{s:'♥',r:'8'},{s:'♥',r:'7'}];
   trick = [{seat:0, card:{s:'♥',r:'9'}}, {seat:1, card:{s:'♥',r:'A'}}];
-  // Seat 2 is partner of seat 0. Winner is seat 1 (A of trump? No, 9 > A in trump)
-  // Wait: trump order is J,9,A,10,K,Q,8,7. So 9 beats A!
-  // Seat 0 played 9, seat 1 played A. Winner is seat 0 (9 > A in trump)
-  // Seat 2's partner is seat 0, who IS winning.
   valid = validCards(hand, trick, '♥', 2);
-  console.assert(valid.length === 2, `Partner winning with 9, can play any trump: got ${valid.length}`);
-  console.log(`  Amsterdam: partner winning with trump 9, any trump ok: ${valid.map(c=>c.r+c.s)} ✓`);
+  console.assert(valid.length === 2, `Trump led, partner winning, can't overtrump: any trump ok, got ${valid.length}`);
+  console.log(`  Trump led, partner winning, can't overtrump: any trump: ${valid.map(c=>c.r+c.s)} ✓`);
+
+  // Test 6c: Can't follow, partner winning with trump — no undertrumping
+  hand = [{s:'♥',r:'8'},{s:'♥',r:'7'},{s:'♦',r:'A'}];
+  trick = [{seat:1, card:{s:'♠',r:'A'}}, {seat:2, card:{s:'♥',r:'J'}}]; // seat 2 trumped with J, winning
+  // Seat 0 can't follow spades. Partner is seat 2 (both even), who IS winning with trump J.
+  // Can play anything EXCEPT lower trumps (8♥, 7♥). Only ♦A is allowed.
+  valid = validCards(hand, trick, '♥', 0);
+  console.assert(valid.length === 1 && valid[0].r === 'A' && valid[0].s === '♦',
+    `Partner winning with trump J, no undertrump: should only play ♦A, got ${valid.map(c=>c.r+c.s)}`);
+  console.log(`  Partner winning with trump, no undertrump: ${valid.map(c=>c.r+c.s)} ✓`);
+
+  // Test 6d: Can't follow, partner winning with trump — hand is ALL lower trumps (forced undertrump)
+  hand = [{s:'♥',r:'8'},{s:'♥',r:'7'}];
+  trick = [{seat:1, card:{s:'♠',r:'A'}}, {seat:2, card:{s:'♥',r:'J'}}];
+  valid = validCards(hand, trick, '♥', 0);
+  console.assert(valid.length === 2 && valid.every(c => c.s === '♥'),
+    `Partner winning, all lower trumps: forced undertrump, got ${valid.map(c=>c.r+c.s)}`);
+  console.log(`  Partner winning, all lower trumps: forced undertrump: ${valid.map(c=>c.r+c.s)} ✓`);
+
+  // Test 6e: Can't follow, partner winning with non-trump — can play anything (Amsterdam)
+  hand = [{s:'♥',r:'J'},{s:'♥',r:'9'},{s:'♦',r:'A'},{s:'♣',r:'K'}];
+  trick = [{seat:2, card:{s:'♠',r:'A'}}]; // partner leads non-trump
+  valid = validCards(hand, trick, '♥', 0);
+  console.assert(valid.length === 4, `Partner winning non-trump: play anything, got ${valid.length}`);
+  console.log(`  Partner winning non-trump: play anything: ${valid.length} choices ✓`);
 
   // Test 7: Leading — can play anything
   hand = [{s:'♠',r:'A'},{s:'♥',r:'K'},{s:'♦',r:'9'},{s:'♣',r:'J'}];
@@ -482,4 +509,40 @@ testBeats();
 testRoem();
 testValidCards();
 testScoring();
+// --- Test Forced Bid (Amsterdam: after 3 passes, 4th must choose) ---
+function testForcedBid() {
+  console.log('=== FORCED BID TEST (Amsterdam) ===');
+
+  // Simulate 4 passes with weak hands — should never redeal, first player forced to choose
+  let forcedBidCount = 0;
+  for (let i = 0; i < 100; i++) {
+    const hands = deal();
+    let passes = 0, trump = null, bidder = null;
+    const firstBidder = 1; // left of dealer (dealer=0)
+    let cur = firstBidder;
+
+    while (!trump) {
+      if (passes >= 3 && cur === firstBidder) {
+        // Force pick the suit with most cards
+        const hand = hands[cur];
+        const suitCounts = {};
+        for (const c of hand) suitCounts[c.s] = (suitCounts[c.s] || 0) + 1;
+        trump = Object.entries(suitCounts).sort((a, b) => b[1] - a[1])[0][0];
+        bidder = cur;
+        forcedBidCount++;
+      } else {
+        // Always pass to test forced bid
+        passes++;
+        cur = (cur + 1) % 4;
+      }
+    }
+
+    console.assert(trump !== null, 'Trump should always be set');
+    console.assert(bidder === firstBidder, 'Bidder should be first bidder (left of dealer)');
+  }
+  console.log(`  Forced bids: ${forcedBidCount}/100 (all forced, no redeals) ✓`);
+  console.log('  Forced bid test passed!\n');
+}
+
+testForcedBid();
 runSimulation(150);

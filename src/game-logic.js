@@ -80,8 +80,17 @@ function team(seat) { return seat % 2 === 0 ? '02' : '13'; }
 function isPartner(seat1, seat2) { return team(seat1) === team(seat2); }
 
 // --- Valid Cards (Amsterdam Rules) ---
-// Amsterdam rule: you don't need to trump or overtrump if your PARTNER
-// is currently winning the trick.
+// Amsterdam rules:
+// 1. Must follow suit if possible.
+// 2. When TRUMP is led: must overtrump if possible, ALWAYS (even if partner winning).
+//    If can't overtrump, must still play a trump (undertrump).
+// 3. When CAN'T follow suit:
+//    a. If partner is winning with NON-trump: may play any card (Amsterdam exception).
+//    b. If partner is winning with trump: may play any card EXCEPT undertrump
+//       (lower trump), unless hand is entirely lower trumps.
+//    c. If opponent is winning: must trump; if opponent winning with trump, must
+//       overtrump if possible, else must still play a trump.
+// 4. If can't follow and can't trump: play anything.
 function validCards(hand, trick, trump, mySeat) {
   if (!trick || !trick.length) return [...hand];
 
@@ -91,12 +100,8 @@ function validCards(hand, trick, trump, mySeat) {
   // 1. Must follow suit if possible
   if (follow.length) {
     if (leadSuit === trump) {
-      // Following trump suit — must overtrump if possible
-      // AMSTERDAM: unless partner is winning
+      // Trump was led — MUST overtrump if possible (even if partner winning)
       const currentWinner = trickWinner(trick, trump);
-      if (mySeat !== undefined && isPartner(currentWinner.seat, mySeat)) {
-        return follow; // Any trump is fine, no need to overtrump
-      }
       const bestRank = TRUMP_ORD.indexOf(currentWinner.card.r);
       const over = follow.filter(c => TRUMP_ORD.indexOf(c.r) < bestRank);
       return over.length ? over : follow; // Must overtrump if can, else any trump
@@ -106,13 +111,35 @@ function validCards(hand, trick, trump, mySeat) {
 
   // 2. Can't follow suit
   const currentWinner = trickWinner(trick, trump);
+  const partnerWinning = mySeat !== undefined && isPartner(currentWinner.seat, mySeat);
 
-  // AMSTERDAM RULE: If partner is winning, no obligation to trump
-  if (mySeat !== undefined && isPartner(currentWinner.seat, mySeat)) {
-    return [...hand]; // Can play anything
+  // AMSTERDAM RULE: If partner is winning
+  if (partnerWinning) {
+    if (currentWinner.card.s === trump) {
+      // Partner winning with trump — can play anything EXCEPT undertrump
+      // (unless hand is entirely lower trumps + non-follow cards)
+      const bestRank = TRUMP_ORD.indexOf(currentWinner.card.r);
+      const myTrumps = hand.filter(c => c.s === trump);
+      const higherTrumps = myTrumps.filter(c => TRUMP_ORD.indexOf(c.r) < bestRank);
+      const lowerTrumps = myTrumps.filter(c => TRUMP_ORD.indexOf(c.r) > bestRank);
+      const nonTrumps = hand.filter(c => c.s !== trump);
+
+      if (nonTrumps.length === 0 && higherTrumps.length === 0) {
+        // Hand is entirely lower trumps — must play one (forced undertrump)
+        return lowerTrumps;
+      }
+      // Can play anything except lower trumps
+      const allowed = hand.filter(c => {
+        if (c.s !== trump) return true; // non-trump always OK
+        return TRUMP_ORD.indexOf(c.r) < bestRank; // only higher trumps OK
+      });
+      return allowed.length ? allowed : [...hand]; // safety fallback
+    }
+    // Partner winning with non-trump — can play anything (Amsterdam exception)
+    return [...hand];
   }
 
-  // 3. Must trump if possible
+  // 3. Opponent winning — must trump if possible
   const trumps = hand.filter(c => c.s === trump);
   if (trumps.length) {
     // If there's already a trump on the table, must overtrump if possible

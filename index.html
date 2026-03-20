@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>De Zwaverjas</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://meet.jit.si/external_api.js"></script>
 <style>
 :root{--gold:#c9a84c;--gold-l:#e8c96e;--cream:#f5ead0;--red:#b02020;--wood:#0d0500;--felt:#1a4a2e;--green:#4ade80;--purple:#a855f7;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -53,7 +54,6 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
   border-radius:20px;padding:4px 12px;font-size:.75em;color:var(--cream);}
 .ls-player-chip.confirmed{background:rgba(74,222,128,.2);border-color:var(--green);color:var(--green);}
 .ls-player-chip.wait{border-color:var(--purple);color:var(--purple);}
-
 .btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px;}
 .btn-gold{padding:12px 32px;background:linear-gradient(135deg,var(--gold),#9a7028);
   border:none;border-radius:10px;font-family:"Playfair Display",serif;font-size:1em;
@@ -72,7 +72,6 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
   50%{box-shadow:0 4px 28px rgba(201,168,76,.4),0 0 0 3px rgba(201,168,76,.15);}}
 .error-bar{background:rgba(180,40,40,.9);color:#fff;padding:10px 20px;border-radius:8px;
   font-size:.8em;margin:12px 20px 0;display:none;line-height:1.5;}
-
 .scoreboard{margin:14px 20px 0;background:rgba(0,0,0,.5);border:1px solid rgba(201,168,76,.25);
   border-radius:10px;padding:10px 14px;display:none;}
 .sb-title{font-family:"Playfair Display",serif;color:var(--gold);font-size:.85em;margin-bottom:8px;}
@@ -83,29 +82,14 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 
 /* ── GAME SCREEN ── */
 #screen-game{display:none;height:100vh;overflow:hidden;
-  grid-template-columns:1fr 280px;grid-template-rows:160px 1fr;}
+  grid-template-columns:1fr 260px;grid-template-rows:180px 1fr;}
 
-/* Video strip — 5 slots */
-.video-strip{grid-column:1/-1;grid-row:1;background:#080300;
-  display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:3px;}
-.vbox{position:relative;background:#120800;border-radius:5px;overflow:hidden;aspect-ratio:4/3;}
-.vbox video{width:100%;height:100%;object-fit:cover;display:block;}
-.vfb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:4px;background:linear-gradient(135deg,#1a0e05,#0a0602);}
-.vfb img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid rgba(201,168,76,.4);}
-.vfb-name{font-size:.65em;color:var(--gold);text-align:center;}
-.vid-name{position:absolute;bottom:3px;left:4px;background:rgba(0,0,0,.75);
-  padding:2px 6px;border-radius:4px;font-size:.68em;color:var(--cream);}
-.vid-team{position:absolute;top:3px;right:3px;font-size:.58em;padding:2px 5px;border-radius:4px;}
-.vid-badge{position:absolute;top:3px;left:3px;font-size:.55em;padding:2px 5px;border-radius:4px;
-  background:rgba(0,0,0,.7);color:var(--cream);}
-.t-ns{background:rgba(20,80,40,.85);color:#7dffa8;}
-.t-ew{background:rgba(80,20,20,.85);color:#ffaa88;}
-.t-wait{background:rgba(100,30,180,.85);color:#d4a5ff;}
-.vid-ring{position:absolute;inset:0;border:3px solid var(--gold);
-  border-radius:5px;pointer-events:none;opacity:0;transition:opacity .3s;}
-.vbox.active .vid-ring{opacity:1;}
-.vbox.speaking{box-shadow:0 0 12px rgba(74,222,128,.6);}
+/* Jitsi video area */
+.video-area{grid-column:1/-1;grid-row:1;background:#080300;position:relative;}
+#jitsi-container{width:100%;height:100%;}
+#jitsi-container iframe{width:100%;height:100%;border:none;}
+.video-placeholder{display:flex;align-items:center;justify-content:center;height:100%;
+  color:rgba(245,234,208,.3);font-style:italic;font-size:.9em;}
 
 /* Table area */
 .table-area{grid-column:1;grid-row:2;position:relative;overflow:hidden;
@@ -142,10 +126,11 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 
 /* Info boxes */
 .info-box{position:absolute;background:rgba(0,0,0,.65);border:1px solid rgba(201,168,76,.38);border-radius:9px;padding:7px 12px;z-index:5;}
-.trump-box{top:8px;right:10px;text-align:center;min-width:60px;}
-.trump-lbl{font-size:.6em;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,234,208,.4);}
-.trump-sym{font-size:2em;line-height:1.1;}
-.trump-bidder{font-size:.6em;color:var(--gold);margin-top:2px;}
+.trump-box{top:8px;right:10px;text-align:center;min-width:70px;
+  border:2px solid rgba(201,168,76,.5);background:rgba(0,0,0,.8);}
+.trump-lbl{font-size:.6em;letter-spacing:.15em;text-transform:uppercase;color:rgba(245,234,208,.5);}
+.trump-sym{font-size:2.5em;line-height:1.1;text-shadow:0 0 12px currentColor;}
+.trump-bidder{font-size:.65em;color:var(--gold);margin-top:2px;font-style:italic;}
 .score-box{top:8px;left:10px;font-family:"Playfair Display",serif;font-size:.78em;}
 .score-row{display:flex;justify-content:space-between;gap:14px;color:var(--gold);}
 .score-val{font-weight:700;}
@@ -154,6 +139,14 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 .roem-box{top:68px;right:10px;font-size:.65em;color:rgba(245,234,208,.5);text-align:center;}
 .roem-lbl{font-size:.85em;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,234,208,.3);}
 .tricks-box{bottom:93px;right:10px;font-size:.72em;color:var(--gold-l);font-family:"Playfair Display",serif;}
+
+/* Running points bar */
+.running-pts{position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.7);border:1px solid rgba(201,168,76,.35);border-radius:20px;
+  padding:4px 16px;font-size:.72em;color:var(--cream);white-space:nowrap;z-index:5;
+  display:flex;gap:12px;align-items:center;}
+.rp-val{font-weight:700;color:var(--gold);font-family:"Playfair Display",serif;}
+.rp-sep{color:rgba(245,234,208,.25);}
 
 /* Game scoreboard overlay */
 .game-sb{position:absolute;bottom:93px;left:10px;
@@ -164,10 +157,10 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 .gsb-row{display:flex;justify-content:space-between;gap:12px;color:var(--cream);}
 .gsb-pts{color:var(--gold);font-weight:700;}
 
-/* Current trick color indicator */
+/* Lead suit indicator */
 .lead-suit-box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
   pointer-events:none;z-index:3;}
-.lead-suit-indicator{font-size:4em;opacity:.08;line-height:1;}
+.lead-suit-indicator{font-size:4em;opacity:.12;line-height:1;}
 
 /* Cards */
 .card{width:52px;height:80px;border-radius:6px;background:#fff;border:1px solid #ccc;
@@ -200,6 +193,7 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 .ptag img{width:16px;height:16px;border-radius:50%;object-fit:cover;}
 .ptag.dealer::after{content:" D";color:var(--gold);}
 .ptag.bidder{border-color:var(--gold);background:rgba(201,168,76,.15);}
+.ptag.active-turn{box-shadow:0 0 12px rgba(201,168,76,.6);border-color:var(--gold);}
 .pt-s{bottom:93px;left:50%;transform:translateX(-50%);}
 .pt-n{top:80px;left:50%;transform:translateX(-50%);}
 .pt-w{left:60px;top:50%;transform:translateY(-50%);}
@@ -207,12 +201,14 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 
 /* Trick zone */
 .trick-zone{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
-  width:200px;height:180px;display:grid;
+  width:240px;height:210px;display:grid;
   grid-template-areas:". N ." "W . E" ". S .";
-  grid-template-columns:1fr 60px 1fr;grid-template-rows:1fr 60px 1fr;
+  grid-template-columns:1fr 65px 1fr;grid-template-rows:1fr 65px 1fr;
   gap:4px;align-items:center;justify-items:center;z-index:4;}
 .tc{position:relative;transition:all .3s;}
 .tc.tn{grid-area:N;}.tc.tw{grid-area:W;}.tc.te{grid-area:E;}.tc.ts{grid-area:S;}
+.tc .tc-name{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);
+  font-size:.55em;color:var(--gold);white-space:nowrap;opacity:.7;}
 
 .turn-bar{position:absolute;bottom:93px;left:50%;transform:translateX(-50%);
   background:rgba(0,0,0,.75);border:1px solid rgba(201,168,76,.45);border-radius:20px;
@@ -226,8 +222,6 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
   animation:fadeUp .3s ease-out;box-shadow:0 0 60px rgba(0,0,0,.8);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .modal h2{font-family:"Playfair Display",serif;color:var(--gold);font-size:1.35em;margin-bottom:8px;}
-
-/* Bid overlay */
 .bid-hand-preview{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;
   margin:12px 0;max-width:360px;}
 .bid-hand-preview .card{width:44px;height:68px;cursor:default !important;}
@@ -252,7 +246,6 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 .rb-pts{font-family:"Playfair Display",serif;font-size:1.85em;color:var(--gold);line-height:1;}
 .rb-team{font-size:.74em;color:rgba(245,234,208,.5);margin-bottom:3px;}
 .rb-roem{font-size:.65em;color:var(--purple);margin-top:2px;}
-.rb-result{font-size:.68em;margin-top:4px;}
 
 /* Continue overlay */
 #ov-continue .modal{background:linear-gradient(155deg,#1e3d5e,#0f1d3b);}
@@ -272,9 +265,8 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 .swap-btn{padding:4px 12px;border-radius:6px;font-size:.75em;cursor:pointer;
   background:var(--purple);border:none;color:white;transition:.2s;}
 .swap-btn:hover{background:#9333ea;}
-.swap-btn:disabled{opacity:.4;cursor:not-allowed;}
 
-/* Waiting room overlay */
+/* Waiting overlay */
 #ov-waiting .modal{background:linear-gradient(155deg,#2a1a4a,#1a0a3a);}
 .waiting-dots{font-size:1.5em;letter-spacing:4px;animation:blink 1.4s infinite;}
 @keyframes blink{0%,80%,100%{opacity:1}40%{opacity:.3}}
@@ -311,46 +303,44 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 
 <!-- ═══════════ GAME ═══════════ -->
 <div id="screen-game">
-  <div class="video-strip" id="video-strip"></div>
+  <div class="video-area">
+    <div id="jitsi-container">
+      <div class="video-placeholder" id="video-placeholder">Video verbinding wordt geladen...</div>
+    </div>
+  </div>
   <div class="table-area" id="table-area">
-    <!-- Score box -->
     <div class="info-box score-box">
       <div class="score-row"><span>N-Z</span><span class="score-val" id="sc-ns">0</span></div>
       <div class="score-row"><span>O-W</span><span class="score-val" id="sc-ew">0</span></div>
     </div>
-    <!-- Trump box -->
     <div class="info-box trump-box">
       <div class="trump-lbl">Troef</div>
       <div class="trump-sym" id="trump-sym">?</div>
       <div class="trump-bidder" id="trump-bidder"></div>
     </div>
-    <!-- Roem tracker -->
     <div class="info-box roem-box" id="roem-box" style="display:none">
       <div class="roem-lbl">Roem</div>
       <div id="roem-ns">N-Z: 0</div>
       <div id="roem-ew">O-W: 0</div>
     </div>
-    <!-- Round info -->
     <div class="info-box round-info-box" id="round-info"></div>
-    <!-- Tricks won -->
     <div class="info-box tricks-box" id="tricks-won"></div>
-    <!-- Player tags -->
+    <div class="running-pts" id="running-pts" style="display:none">
+      <span>N-Z: <span class="rp-val" id="rp-ns">0</span></span>
+      <span class="rp-sep">|</span>
+      <span>O-W: <span class="rp-val" id="rp-ew">0</span></span>
+    </div>
     <div class="ptag pt-n" id="tag-n"><span>Noord</span></div>
     <div class="ptag pt-w" id="tag-w"><span>West</span></div>
     <div class="ptag pt-e" id="tag-e"><span>Oost</span></div>
     <div class="ptag pt-s" id="tag-s"><span>Jij</span></div>
-    <!-- Hands -->
     <div class="hand-n" id="hand-n"></div>
     <div class="hand-w" id="hand-w"></div>
     <div class="hand-e" id="hand-e"></div>
     <div class="hand-s" id="hand-s"></div>
-    <!-- Lead suit indicator -->
     <div class="lead-suit-box" id="lead-suit-box"><div class="lead-suit-indicator" id="lead-suit"></div></div>
-    <!-- Trick zone -->
     <div class="trick-zone" id="trick-zone"></div>
-    <!-- Turn indicator -->
     <div class="turn-bar" id="turn-bar">Wachten...</div>
-    <!-- Session scoreboard -->
     <div class="game-sb" id="game-sb" style="display:none">
       <div class="gsb-title">Totaal</div>
       <div id="gsb-rows"></div>
@@ -360,7 +350,6 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
     <div class="chat-head">
       <span>Chat</span>
       <div class="chat-btns">
-        <button class="chat-btn" id="unmute-btn" onclick="unmuteAll()" style="background:rgba(74,222,128,.15);border-color:var(--green);color:var(--green)">🔊 Geluid aan</button>
         <button class="chat-btn purple" id="btn-swap" style="display:none" onclick="requestSwap()">Wissel</button>
         <button class="chat-btn red" onclick="leaveGame()">Verlaat spel</button>
       </div>
@@ -401,7 +390,7 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
   </div>
 </div>
 
-<!-- ═══════════ CONTINUE? OVERLAY (after 4 rounds) ═══════════ -->
+<!-- ═══════════ CONTINUE? OVERLAY ═══════════ -->
 <div class="overlay" id="ov-continue">
   <div class="modal">
     <h2 id="continue-title">Nog 4 ronden?</h2>
@@ -424,7 +413,19 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
       Kies een speler om mee te wisselen. Beide spelers moeten akkoord gaan.
     </p>
     <div class="swap-players" id="swap-players"></div>
-    <button class="btn-secondary" onclick="closeSwap()">Annuleren</button>
+    <button class="btn-secondary" onclick="closeOverlay('ov-swap')">Annuleren</button>
+  </div>
+</div>
+
+<!-- ═══════════ SWAP REQUEST OVERLAY ═══════════ -->
+<div class="overlay" id="ov-swap-request">
+  <div class="modal">
+    <h2>Wissel-verzoek</h2>
+    <p id="swap-request-msg" style="color:rgba(245,234,208,.6);font-size:.85em;margin-bottom:16px"></p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="acceptSwap()">Akkoord</button>
+      <button class="btn-secondary" style="width:auto;padding:10px 24px;margin-top:0" onclick="declineSwap()">Weigeren</button>
+    </div>
   </div>
 </div>
 
@@ -439,19 +440,7 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
     <p style="color:rgba(245,234,208,.4);font-size:.75em;margin-top:16px">
       Je komt automatisch in het spel als er een plek vrijkomt.
     </p>
-    <button class="btn-secondary" style="margin-top:16px" onclick="cancelWaiting()">Annuleren</button>
-  </div>
-</div>
-
-<!-- ═══════════ SWAP REQUEST OVERLAY ═══════════ -->
-<div class="overlay" id="ov-swap-request" style="display:none">
-  <div class="modal">
-    <h2>Wissel-verzoek</h2>
-    <p id="swap-request-msg" style="color:rgba(245,234,208,.6);font-size:.85em;margin-bottom:16px"></p>
-    <div style="display:flex;gap:10px;justify-content:center;">
-      <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="acceptSwap()">Akkoord</button>
-      <button class="btn-secondary" style="width:auto;padding:10px 24px;margin-top:0" onclick="declineSwap()">Weigeren</button>
-    </div>
+    <button class="btn-secondary" style="margin-top:16px" onclick="cancelWaiting()">Verlaat wachtkamer</button>
   </div>
 </div>
 
@@ -459,7 +448,7 @@ h1.app-title{font-family:"Playfair Display",serif;font-size:2.8em;font-weight:90
 // ════════════════════════════════════════════════
 // FIREBASE
 // ════════════════════════════════════════════════
-const DB='https://harry-100---aug-2026-default-rtdb.europe-west1.firebasedatabase.app/zwaverjas2';
+const DB='https://harry-100---aug-2026-default-rtdb.europe-west1.firebasedatabase.app/zwaverjas3';
 async function fbGet(p){try{const r=await fetch(DB+p+'.json');return r.ok?r.json():null;}catch(e){return null;}}
 async function fbSet(p,d){try{await fetch(DB+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});}catch(e){}}
 async function fbPatch(p,d){try{await fetch(DB+p+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});}catch(e){}}
@@ -520,16 +509,18 @@ function trickWinner(trick,t){
   return best;
 }
 
-// Amsterdam valid cards: no need to trump/overtrump if partner wins
+// Amsterdam valid cards
+// 1. Must follow suit. 2. Trump led: MUST overtrump always (even if partner winning).
+// 3. Can't follow: partner winning non-trump → anything; partner winning trump → no undertrump;
+//    opponent winning → must trump/overtrump. 4. Can't follow or trump → anything.
 function validCards(hand,trick,t,mySeat){
   if(!trick||!trick.length)return[...hand];
   const lead=trick[0].card.s;
   const follow=hand.filter(c=>c.s===lead);
   if(follow.length){
     if(lead===t){
-      // Must overtrump — UNLESS partner is winning (Amsterdam)
+      // Trump led — MUST overtrump always
       const w=trickWinner(trick,t);
-      if(mySeat!==undefined&&isPartner(w.seat,mySeat))return follow;
       const bestIdx=TRUMP_ORD.indexOf(w.card.r);
       const over=follow.filter(c=>TRUMP_ORD.indexOf(c.r)<bestIdx);
       return over.length?over:follow;
@@ -538,24 +529,37 @@ function validCards(hand,trick,t,mySeat){
   }
   // Can't follow suit
   const w=trickWinner(trick,t);
-  // Amsterdam: partner winning = no obligation to trump
-  if(mySeat!==undefined&&isPartner(w.seat,mySeat))return[...hand];
+  const partnerWin=mySeat!==undefined&&isPartner(w.seat,mySeat);
+  if(partnerWin){
+    if(w.card.s===t){
+      // Partner winning with trump — no undertrumping
+      const bestIdx=TRUMP_ORD.indexOf(w.card.r);
+      const myTrumps=hand.filter(c=>c.s===t);
+      const higher=myTrumps.filter(c=>TRUMP_ORD.indexOf(c.r)<bestIdx);
+      const lower=myTrumps.filter(c=>TRUMP_ORD.indexOf(c.r)>bestIdx);
+      const nonT=hand.filter(c=>c.s!==t);
+      if(nonT.length===0&&higher.length===0)return lower;
+      const allowed=hand.filter(c=>c.s!==t||TRUMP_ORD.indexOf(c.r)<bestIdx);
+      return allowed.length?allowed:[...hand];
+    }
+    return[...hand]; // Partner winning non-trump: anything
+  }
+  // Opponent winning — must trump
   const trumps=hand.filter(c=>c.s===t);
   if(trumps.length){
     if(w.card.s===t){
       const bestIdx=TRUMP_ORD.indexOf(w.card.r);
       const over=trumps.filter(c=>TRUMP_ORD.indexOf(c.r)<bestIdx);
-      return over.length?over:trumps; // Must play trump even if can't overtrump
+      return over.length?over:trumps;
     }
     return trumps;
   }
   return[...hand];
 }
 
-// Roem calculation
+// Roem
 function calcRoem(cards,trump){
   let roem=0;
-  // Sequences by suit
   const bySuit={};
   for(const c of cards){if(!bySuit[c.s])bySuit[c.s]=[];bySuit[c.s].push(c.r);}
   for(const[,ranks]of Object.entries(bySuit)){
@@ -565,13 +569,11 @@ function calcRoem(cards,trump){
     for(let i=1;i<idx.length;i++){if(idx[i]===idx[i-1]+1)cur++;else cur=1;maxRun=Math.max(maxRun,cur);}
     if(maxRun>=4)roem+=50;else if(maxRun>=3)roem+=20;
   }
-  // Four of a kind
   const byRank={};
   for(const c of cards)byRank[c.r]=(byRank[c.r]||0)+1;
   for(const[rank,cnt]of Object.entries(byRank)){
     if(cnt===4){if(rank==='J')roem+=200;else if(['10','Q','K','A'].includes(rank))roem+=100;}
   }
-  // Stuk (K+Q of trump)
   if(cards.some(c=>c.s===trump&&c.r==='K')&&cards.some(c=>c.s===trump&&c.r==='Q'))roem+=20;
   return roem;
 }
@@ -582,7 +584,7 @@ function scoreRound(doneTricks,trump,bidder){
     const t=doneTricks[i],tm=team(t.winner);tc[tm]++;
     let tp=0;for(const{card}of t.cards)tp+=cPts(card,trump);
     if(i===7)tp+=10;pts[tm]+=tp;
-    const cards=t.cards.map(x=>x.card);rPts[tm]+=calcRoem(cards,trump);
+    rPts[tm]+=calcRoem(t.cards.map(x=>x.card),trump);
   }
   const bt=team(bidder),ot=bt==='02'?'13':'02';
   const bTot=pts[bt]+rPts[bt],oTot=pts[ot]+rPts[ot];
@@ -612,7 +614,6 @@ function mkState(dealer,seats,prevScores){
 // APP STATE
 // ════════════════════════════════════════════════
 let ME='';
-let myStream=null;
 let isHost=false;
 let mySeat=-1;
 let isWaiting=false;
@@ -620,16 +621,19 @@ let gs=null;
 let lobby=null;
 let presence={};
 let seatMap={};
-let peerConns={};
-let remoteStreams={};
 let evtSource=null;
 let presTimer=null;
 let processedActions=new Set();
 let lastChatTs=0;
-let pendingSwap=null; // {from, to}
-let lastVideoStripKey='';
-let _gettingStream=null; // mutex for getLocalStream
-let pendingPeers=new Set(); // prevent concurrent call/answer for same peer
+let pendingSwap=null;
+let jitsiApi=null;
+let jitsiRoomName=null;
+
+// ════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════
+function closeOverlay(id){document.getElementById(id).style.display='none';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 // ════════════════════════════════════════════════
 // LOGIN UI
@@ -658,8 +662,8 @@ function updateGrid(){
     const isMe=p.id===ME;
     const pr=presence[p.id];
     const alive=pr&&pr.online&&(now-pr.ts)<45000;
-    const inGame=lobby&&lobby.players&&lobby.players[p.id]==='playing';
-    const waiting=lobby&&lobby.players&&lobby.players[p.id]==='waiting';
+    const inGame=lobby?.players?.[p.id]==='playing';
+    const waiting=lobby?.players?.[p.id]==='waiting';
     if(isMe){
       card.className='player-card me'+(isWaiting?' waiting':'');
       dot.className='status-dot '+(isWaiting?'sd-wait':'sd-me');
@@ -691,121 +695,75 @@ function updateLobbyUI(){
   const players=lobby.players||{};
   const playing=Object.entries(players).filter(([,s])=>s==='playing').map(([id])=>id);
   const waiting=Object.entries(players).filter(([,s])=>s==='waiting').map(([id])=>id);
-  const el=document.getElementById('ls-players');
-  el.innerHTML=playing.map(id=>`<span class="ls-player-chip confirmed">${nameOf(id)}</span>`).join('')
-    +(waiting.length?waiting.map(id=>`<span class="ls-player-chip wait">${nameOf(id)} (wacht)</span>`).join(''):'');
+  document.getElementById('ls-players').innerHTML=
+    playing.map(id=>`<span class="ls-player-chip confirmed">${nameOf(id)}</span>`).join('')+
+    waiting.map(id=>`<span class="ls-player-chip wait">${nameOf(id)} (wacht)</span>`).join('');
   const btns=document.getElementById('ls-btns');btns.innerHTML='';
-  const gameActive=lobby.status==='playing'||lobby.status==='waiting_players';
   if(!ME)return;
   const myStatus=players[ME];
+  const gameActive=lobby.status==='playing'||lobby.status==='waiting_players';
   if(!gameActive){
-    const b=document.createElement('button');b.className='btn-gold';b.textContent='Start een spel!';
-    b.onclick=startGame;btns.appendChild(b);
+    addBtn(btns,'btn-gold','Start een spel!',startGame);
   }else if(!myStatus){
-    if(playing.length<4){
-      const b=document.createElement('button');b.className='btn-gold';b.textContent='Doe mee!';
-      b.onclick=joinGame;btns.appendChild(b);
-    }else{
-      const b=document.createElement('button');b.className='btn-outline';b.textContent='Wachtkamer (meekijken & praten)';
-      b.onclick=joinWaiting;btns.appendChild(b);
-    }
+    if(playing.length<4)addBtn(btns,'btn-gold','Doe mee!',joinGame);
+    else addBtn(btns,'btn-outline','Wachtkamer (meekijken & praten)',joinWaiting);
   }else if(myStatus==='playing'){
-    const b=document.createElement('button');b.className='btn-gold';b.textContent='Terug naar spel';
-    b.onclick=()=>showGame();btns.appendChild(b);
+    addBtn(btns,'btn-gold','Terug naar spel',()=>showGame());
+  }else if(myStatus==='waiting'){
+    addBtn(btns,'btn-outline','Terug naar wachtkamer',()=>showGame());
   }
-  const rb=document.createElement('button');rb.className='btn-red';rb.textContent='Reset spel';
-  rb.onclick=resetGame;btns.appendChild(rb);
+  addBtn(btns,'btn-red','Reset alles',resetGame);
   if(lobby.sessionScores)renderSessionScoreboard(lobby.sessionScores);
 }
+function addBtn(parent,cls,text,fn){const b=document.createElement('button');b.className=cls;b.textContent=text;b.onclick=fn;parent.appendChild(b);}
 
 // ════════════════════════════════════════════════
 // PRESENCE
 // ════════════════════════════════════════════════
 async function pickPlayer(id){
   if(ME)return;ME=id;updateGrid();
-  setBar('Verbinden met Firebase...');
+  setBar('Verbinden...');
   document.getElementById('ls-game-info').style.display='block';
   try{await fbSet('/test',{ts:Date.now()});await fbDel('/test');}
   catch(e){showError('Firebase-schrijftoegang mislukt.');ME='';return;}
-  setBar('Online melden...');
   await writePresence();
   presTimer=setInterval(writePresence,15000);
-  window.addEventListener('beforeunload',()=>fbSet('/presence/'+ME,{ts:Date.now(),online:false}));
+  window.addEventListener('beforeunload',()=>{fbSet('/presence/'+ME,{ts:Date.now(),online:false});});
   startStream();
   setBar('Lobby joinen...');
   try{await autoJoinLobby();}
-  catch(e){showError('Fout bij lobby: '+e.message);console.error('autoJoinLobby error:',e);}
+  catch(e){showError('Fout bij lobby: '+e.message);console.error(e);}
 }
 async function writePresence(){if(ME)await fbSet('/presence/'+ME,{ts:Date.now(),online:true});}
 
-// Auto-create or join existing lobby, then show game room
+// ════════════════════════════════════════════════
+// AUTO JOIN LOBBY
+// ════════════════════════════════════════════════
 async function autoJoinLobby(){
-  // Clear stale signaling data for this player (from previous sessions)
-  try{const oldSig=await fbGet('/sig');
-    if(oldSig&&typeof oldSig==='object'){for(const key of Object.keys(oldSig)){if(key.includes(ME))await fbDel('/sig/'+key);}}
-  }catch(e){console.warn('sig cleanup failed:',e);}
   const existing=await fbGet('/lobby');
   if(existing&&existing.players){
-    // Lobby exists — join it
     const playing=Object.entries(existing.players).filter(([,s])=>s==='playing').map(([id])=>id);
     if(playing.includes(ME)){
-      // Already in lobby
       lobby=existing;seatMap=existing.seats||{};mySeat=seatMap[ME]??-1;
     }else if(playing.length<4){
-      // Join as player
       const takenSeats=Object.values(existing.seats||{});
       let seat=0;while(takenSeats.includes(seat))seat++;
       await fbPatch('/lobby/players',{[ME]:'playing'});
       await fbPatch('/lobby/seats',{[ME]:seat});
-      // Set lobby locally so showGame/initVideo can use it immediately
       lobby={...existing,players:{...existing.players,[ME]:'playing'},seats:{...(existing.seats||{}),[ME]:seat}};
       seatMap=lobby.seats;mySeat=seat;
     }else{
-      // Full — join as waiting
       await fbPatch('/lobby/players',{[ME]:'waiting'});
       lobby={...existing,players:{...existing.players,[ME]:'waiting'}};
-      seatMap=existing.seats||{};mySeat=-1;
+      seatMap=existing.seats||{};mySeat=-1;isWaiting=true;
     }
   }else{
-    // No lobby — create one with just me
     const newLobby={host:ME,status:'waiting_players',players:{[ME]:'playing'},seats:{[ME]:0},
       sessionScores:existing?.sessionScores||{},startedAt:Date.now()};
     await fbSet('/lobby',newLobby);
-    lobby=newLobby;
-    seatMap={[ME]:0};mySeat=0;isHost=true;
+    lobby=newLobby;seatMap={[ME]:0};mySeat=0;isHost=true;
   }
-  debugMsg('Lobby: host='+lobby.host+' players='+Object.keys(lobby.players||{}).join(',')+' mySeat='+mySeat);
   showGame();
-}
-
-// When presence changes, auto-add newly online players to lobby
-async function onPresenceChange(){
-  if(!ME||!lobby)return;
-  // Start camera when 2+ players are in lobby
-  const lobbyPlayers=Object.keys(lobby.players||{});
-  if(lobbyPlayers.length>=2&&!myStream){initVideoForLobby();}
-  else if(myStream){connectVideoToAll();}
-  // If I'm host and there's no active game, auto-add online players to lobby
-  if(!isHost)return;
-  if(gs&&gs.phase&&gs.phase!=='ended')return; // game in progress, don't auto-add
-  const now=Date.now();
-  const currentPlayers=Object.keys(lobby.players||{});
-  for(const p of ROSTER){
-    if(currentPlayers.includes(p.id))continue;
-    const pr=presence[p.id];
-    if(pr&&pr.online&&(now-pr.ts)<45000){
-      // New online player — auto-add to lobby
-      const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
-      if(playing.length<4){
-        const takenSeats=Object.values(lobby.seats||{});
-        let seat=0;while(takenSeats.includes(seat))seat++;
-        await fbPatch('/lobby/players',{[p.id]:'playing'});
-        await fbPatch('/lobby/seats',{[p.id]:seat});
-      }else{
-        await fbPatch('/lobby/players',{[p.id]:'waiting'});
-      }
-    }
-  }
 }
 
 // ════════════════════════════════════════════════
@@ -830,53 +788,37 @@ function deepMerge(obj,path,val){if(path==='/'||path===''){if(val&&typeof val===
 
 function onUpdate(data){
   if(!data)return;
-  if(data.presence){presence=data.presence;updateGrid();onPresenceChange();}
+  if(data.presence){presence=data.presence;updateGrid();}
   if(data.lobby){lobby=data.lobby;updateLobbyUI();updateGrid();handleLobbyChange();}
   if(data.game){
     gs=data.game;seatMap=gs.seats||{};mySeat=seatMap[ME]??-1;
     if(document.getElementById('screen-game').style.display==='grid')renderGame();
-    else if(gs.phase&&gs.phase!=='ended'&&lobby&&lobby.players&&lobby.players[ME]==='playing')showGame();
+    else if(gs.phase&&gs.phase!=='ended'&&lobby?.players?.[ME])showGame();
   }
   if(data.actions&&isHost)processActions(data.actions);
   if(data.chat)renderChatData(data.chat);
-  if(data.sig)processSigData(data.sig);
   if(data.swapRequest)handleSwapRequest(data.swapRequest);
   if(data.continueVotes)renderContinueVotes(data.continueVotes);
 }
 
 function handleLobbyChange(){
-  // Show swap button if 5th person is waiting and I'm playing
   const players=lobby?.players||{};
   const myStatus=players[ME];
   const waitingPlayers=Object.entries(players).filter(([,s])=>s==='waiting').map(([id])=>id);
   const btn=document.getElementById('btn-swap');
-  if(btn){
-    btn.style.display=(myStatus==='playing'&&waitingPlayers.length>0)||(myStatus==='waiting')?'inline-block':'none';
-  }
-  // Update seats
+  if(btn)btn.style.display=(myStatus==='playing'&&waitingPlayers.length>0)||(myStatus==='waiting')?'inline-block':'none';
   if(lobby){seatMap=lobby.seats||{};mySeat=seatMap[ME]??-1;}
-  // Only rebuild video strip when the player list actually changes
-  if(document.getElementById('screen-game').style.display==='grid'){
-    const newKey=JSON.stringify(lobby?.players||{})+'|'+JSON.stringify(lobby?.seats||{});
-    if(newKey!==lastVideoStripKey){
-      lastVideoStripKey=newKey;
-      buildVideoStrip();showSelfVideo();
-      for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
-    }
-    updateWaitingUI();
-  }
-  // Start camera if 2+ players and not yet started, then connect
-  const lobbyCount=Object.keys(lobby?.players||{}).length;
-  if(lobbyCount>=2&&!myStream){initVideoForLobby();}
-  else if(myStream){connectVideoToAll();}
+  if(document.getElementById('screen-game').style.display==='grid')updateWaitingUI();
+  // Start Jitsi when 2+ people in lobby
+  const lobbyCount=Object.keys(players).length;
+  if(lobbyCount>=2&&!jitsiApi)startJitsi();
+  checkHost();
 }
 
-// Show waiting-for-players UI or start button when enough players
 function updateWaitingUI(){
   const players=lobby?.players||{};
   const playing=Object.entries(players).filter(([,s])=>s==='playing').map(([id])=>id);
-  const bar=document.getElementById('turn-bar');
-  if(!bar)return;
+  const bar=document.getElementById('turn-bar');if(!bar)return;
   const gameActive=gs&&gs.phase&&gs.phase!=='ended';
   if(!gameActive){
     if(playing.length<4){
@@ -888,13 +830,72 @@ function updateWaitingUI(){
 }
 
 // ════════════════════════════════════════════════
+// JITSI VIDEO — reliable, handles everything
+// ════════════════════════════════════════════════
+function startJitsi(){
+  if(jitsiApi)return;
+  // Create a deterministic room name so all players join the same room
+  jitsiRoomName='zwaverjas'+(lobby?.startedAt||Date.now());
+  const placeholder=document.getElementById('video-placeholder');
+  if(placeholder)placeholder.remove();
+  try{
+    jitsiApi=new JitsiMeetExternalAPI('meet.jit.si',{
+      roomName:jitsiRoomName,
+      parentNode:document.getElementById('jitsi-container'),
+      width:'100%',
+      height:'100%',
+      userInfo:{displayName:nameOf(ME)},
+      configOverwrite:{
+        startWithAudioMuted:false,
+        startWithVideoMuted:false,
+        prejoinPageEnabled:false,
+        disableDeepLinking:true,
+        hideConferenceSubject:true,
+        hideConferenceTimer:true,
+        disableModeratorIndicator:true,
+        disableReactions:true,
+        disablePolls:true,
+        disableSelfViewSettings:true,
+        toolbarButtons:['microphone','camera','tileview','hangup','settings'],
+        notifications:[],
+        disableInviteFunctions:true,
+        enableClosePage:false,
+        filmstrip:{disableStageFilmstrip:true},
+      },
+      interfaceConfigOverwrite:{
+        DISABLE_JOIN_LEAVE_NOTIFICATIONS:true,
+        SHOW_CHROME_EXTENSION_BANNER:false,
+        MOBILE_APP_PROMO:false,
+        HIDE_INVITE_MORE_HEADER:true,
+        TOOLBAR_ALWAYS_VISIBLE:false,
+        TOOLBAR_TIMEOUT:3000,
+        filmStripOnly:false,
+        DEFAULT_BACKGROUND:'#080300',
+        DISABLE_VIDEO_BACKGROUND:true,
+      }
+    });
+    jitsiApi.addEventListener('videoConferenceLeft',()=>{
+      console.log('[ZW] Jitsi: left conference');
+    });
+    console.log('[ZW] Jitsi started: room='+jitsiRoomName);
+  }catch(e){
+    console.error('[ZW] Jitsi failed to start:',e);
+    document.getElementById('jitsi-container').innerHTML=
+      '<div class="video-placeholder">Video kon niet starten. Herlaad de pagina.</div>';
+  }
+}
+
+function stopJitsi(){
+  if(jitsiApi){try{jitsiApi.dispose();}catch(e){}jitsiApi=null;}
+}
+
+// ════════════════════════════════════════════════
 // LOBBY MANAGEMENT
 // ════════════════════════════════════════════════
 async function startGameFromRoom(){
   if(!ME||!lobby)return;
   const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
   if(playing.length<4){document.getElementById('turn-bar').textContent='Nog niet genoeg spelers ('+playing.length+'/4)';return;}
-  // Use existing seats from lobby
   const seats=lobby.seats||{};
   seatMap=seats;mySeat=seats[ME]??-1;
   await fbPatch('/lobby',{status:'playing',host:ME});
@@ -904,38 +905,31 @@ async function startGameFromRoom(){
   processedActions.clear();
   isHost=true;
   await pushChat('Spel','Spel gestart door '+nameOf(ME)+'!');
-  buildVideoStrip();showSelfVideo();
-  for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
   renderGame();
 }
 
 async function startGame(){
   if(!ME){setBar('Kies eerst een speler!');return;}
-  // Lock: check if game already active
   const existing=await fbGet('/lobby');
-  if(existing&&existing.status==='playing'){
-    setBar('Er loopt al een spel! Klik "Doe mee" of "Wachtkamer".');
-    return;
+  if(existing&&(existing.status==='playing'||existing.status==='waiting_players')){
+    lobby=existing;
+    const playing=Object.entries(existing.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
+    if(playing.includes(ME)){seatMap=existing.seats||{};mySeat=seatMap[ME]??-1;showGame();return;}
+    if(playing.length<4){await joinGame();return;}
+    await joinWaiting();return;
   }
   const now=Date.now();
-  const onlinePlayers=ROSTER.filter(p=>{const pr=presence[p.id];return pr&&pr.online&&(now-pr.ts)<45000;}).map(p=>p.id);
-  if(ME&&!onlinePlayers.includes(ME))onlinePlayers.push(ME);
-  onlinePlayers.sort();
-  const players={};
-  onlinePlayers.slice(0,4).forEach(id=>players[id]='playing');
-  onlinePlayers.slice(4).forEach(id=>players[id]='waiting');
-  const seats={};
-  onlinePlayers.slice(0,4).forEach((id,i)=>seats[id]=i);
+  const online=ROSTER.filter(p=>{const pr=presence[p.id];return pr&&pr.online&&(now-pr.ts)<45000;}).map(p=>p.id);
+  if(!online.includes(ME))online.push(ME);
+  const players={},seats={};
+  online.slice(0,4).forEach((id,i)=>{players[id]='playing';seats[id]=i;});
+  online.slice(4).forEach(id=>players[id]='waiting');
   seatMap=seats;mySeat=seats[ME]??-1;
-  const newLobby={host:ME,status:'playing',players,seats,
-    sessionScores:lobby?.sessionScores||{},startedAt:now};
+  const newLobby={host:ME,status:'waiting_players',players,seats,sessionScores:{},startedAt:now};
   await fbSet('/lobby',newLobby);
-  await fbSet('/game',mkState(0,seats));
-  await fbSet('/actions',null);
-  await fbSet('/continueVotes',null);
-  processedActions.clear();
-  isHost=true;
-  await pushChat('Spel','Spel gestart door '+nameOf(ME)+'!');
+  await fbSet('/game',null);await fbSet('/actions',null);await fbSet('/continueVotes',null);
+  processedActions.clear();isHost=true;lobby=newLobby;
+  await pushChat('Spel','Lobby gestart door '+nameOf(ME)+'!');
   showGame();
 }
 
@@ -943,50 +937,54 @@ async function joinGame(){
   if(!ME||!lobby)return;
   const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
   if(playing.length>=4){joinWaiting();return;}
+  const takenSeats=Object.values(lobby.seats||{});
+  let seat=0;while(takenSeats.includes(seat))seat++;
   await fbPatch('/lobby/players',{[ME]:'playing'});
-  const existingSeats=lobby.seats||{};
-  const takenSeats=Object.values(existingSeats);
-  let mySeatNum=0;while(takenSeats.includes(mySeatNum))mySeatNum++;
-  const newSeats={...existingSeats,[ME]:mySeatNum};
-  await fbPatch('/lobby',{seats:newSeats});
-  seatMap=newSeats;mySeat=mySeatNum;
+  await fbPatch('/lobby/seats',{[ME]:seat});
+  seatMap={...(lobby.seats||{}),[ME]:seat};mySeat=seat;
+  isWaiting=false;
   showGame();
 }
 
 async function joinWaiting(){
   if(!ME||!lobby)return;
-  isWaiting=true;
+  isWaiting=true;mySeat=-1;
   await fbPatch('/lobby/players',{[ME]:'waiting'});
-  document.getElementById('ov-waiting').style.display='flex';
   updateGrid();
-  // Start video even though waiting
-  await initVideoForLobby();
+  showGame();
 }
+
 async function cancelWaiting(){
   isWaiting=false;
   await fbPatch('/lobby/players',{[ME]:null});
-  document.getElementById('ov-waiting').style.display='none';
-  updateGrid();
+  closeOverlay('ov-waiting');
+  returnToLobby();
 }
 
 async function leaveGame(){
   if(!ME||!lobby)return;
+  const myOldSeat=lobby.seats?.[ME];
   await fbPatch('/lobby/players',{[ME]:null});
-  const oldSeats=lobby.seats||{};
+  const oldSeats={...(lobby.seats||{})};
   delete oldSeats[ME];
   await fbPatch('/lobby',{seats:oldSeats});
-  // Check if waiting player can join
-  const waitingPlayers=Object.entries(lobby.players||{}).filter(([id,s])=>s==='waiting'&&id!==ME).map(([id])=>id);
-  if(waitingPlayers.length>0){
-    const joiner=waitingPlayers[0];
-    const takenSeats=Object.values(oldSeats);
-    let newSeat=0;while(takenSeats.includes(newSeat))newSeat++;
+  // Auto-promote waiting player
+  const waiters=Object.entries(lobby.players||{}).filter(([id,s])=>s==='waiting'&&id!==ME).map(([id])=>id);
+  if(waiters.length>0&&myOldSeat!==undefined){
+    const joiner=waiters[0];
     await fbPatch('/lobby/players',{[joiner]:'playing'});
-    await fbPatch('/lobby/seats',{[joiner]:newSeat});
-    await pushChat('Spel',nameOf(joiner)+' komt het spel in!');
+    await fbPatch('/lobby/seats',{[joiner]:myOldSeat});
+    // Reset scores, shuffle teams
+    const playing=Object.entries(lobby.players||{}).filter(([id,s])=>s==='playing'&&id!==ME).map(([id])=>id);
+    if(!playing.includes(joiner))playing.push(joiner);
+    const freshSeats={};
+    playing.sort(()=>Math.random()-.5).forEach((id,i)=>freshSeats[id]=i);
+    await fbPatch('/lobby',{seats:freshSeats,sessionScores:{}});
+    if(isHost){gs=mkState(0,freshSeats);gs.setNumber=1;await fbSet('/game',gs);}
+    await pushChat('Spel',nameOf(joiner)+' komt erin! Scores gereset, teams gemixt!');
   }
   const remaining=Object.entries(lobby.players||{}).filter(([id,s])=>s==='playing'&&id!==ME).length;
-  if(remaining===0){await pushChat('Spel','Iedereen is weg. Tot de volgende keer!');await fbSet('/game',null);await fbSet('/lobby',null);}
+  if(remaining===0){await pushChat('Spel','Iedereen weg. Tot de volgende keer!');await fbSet('/game',null);await fbSet('/lobby',null);}
   else await pushChat('Spel',nameOf(ME)+' heeft het spel verlaten.');
   returnToLobby();
 }
@@ -997,8 +995,19 @@ function returnToLobby(){
   document.getElementById('screen-login').style.display='block';
   ['ov-round','ov-bid','ov-waiting','ov-continue','ov-swap','ov-swap-request'].forEach(id=>
     document.getElementById(id).style.display='none');
-  // Don't close video connections — keep them for lobby chatting
   updateGrid();updateLobbyUI();
+}
+
+async function resetGame(){
+  if(!ME)return;
+  if(!confirm('Alles resetten? Dit verwijdert het huidige spel voor iedereen.'))return;
+  await fbSet('/lobby',null);await fbSet('/game',null);
+  await fbSet('/actions',null);await fbSet('/swapRequest',null);await fbSet('/continueVotes',null);
+  processedActions.clear();
+  isHost=false;mySeat=-1;gs=null;lobby=null;seatMap={};
+  stopJitsi();
+  returnToLobby();
+  setBar('Alles gereset. Start een nieuw spel!');
 }
 
 // ════════════════════════════════════════════════
@@ -1052,9 +1061,10 @@ function hostBid(seat,suit){
 function hostPass(seat){
   if(!gs||gs.phase!=='playing_bidding'||gs.cur!==seat)return;
   gs.bidPasses=(gs.bidPasses||0)+1;
-  if(gs.bidPasses>=4){
-    gs.bidPasses=0;gs.hands=deal();gs.dealer=(gs.dealer+1)%4;gs.cur=(gs.dealer+1)%4;
-    pushChat('Spel','Iedereen gepast — opnieuw delen!');
+  if(gs.bidPasses>=3){
+    // Amsterdam: after 3 passes, 4th player MUST choose
+    gs.cur=(seat+1)%4;
+    pushChat('Spel','Drie keer gepast — '+nameForSeat(gs.cur)+' MOET kiezen!');
   }else gs.cur=(seat+1)%4;
   broadcast();
 }
@@ -1067,7 +1077,6 @@ function hostPlay(seat,card){
   hand.splice(idx,1);gs.trick.push({seat,card});
   if(gs.trick.length===4){
     const w=trickWinner(gs.trick,gs.trump);
-    // Calculate roem for this trick
     const trickCards=gs.trick.map(x=>x.card);
     const roem=calcRoem(trickCards,gs.trump);
     if(roem>0){
@@ -1085,22 +1094,17 @@ function hostPlay(seat,card){
 
 function endRound(){
   const result=scoreRound(gs.doneTricks,gs.trump,gs.bidder);
-  gs.roundPts=result.cardPts;
-  gs.roundRoem=result.roemPts;
-  gs.roundResult=result;
+  gs.roundPts=result.cardPts;gs.roundRoem=result.roemPts;gs.roundResult=result;
   const bt=team(gs.bidder),bStr=bt==='02'?'N-Z':'O-W';
-  if(result.result==='pit')pushChat('Spel','PIT! '+bStr+' pakt alles! '+(result.scores[bt])+ ' punten!');
-  else if(result.result==='won')pushChat('Spel',bStr+' wint de ronde met '+(result.bTot)+' punten!');
-  else pushChat('Spel','NAT! '+bStr+' is nat. Tegenstander krijgt '+(result.scores[bt==='02'?'13':'02'])+' punten!');
-  // Update cumulative scores
+  if(result.result==='pit')pushChat('Spel','PIT! '+bStr+' pakt alles! '+result.scores[bt]+' punten!');
+  else if(result.result==='won')pushChat('Spel',bStr+' wint met '+result.bTot+' punten!');
+  else pushChat('Spel','NAT! '+bStr+' is nat. Tegenstander krijgt '+result.scores[bt==='02'?'13':'02']+' punten!');
   gs.scores['02']+=result.scores['02'];
   gs.scores['13']+=result.scores['13'];
-  // Update session scores
   if(!gs.sessionScores)gs.sessionScores={};
   for(let seat=0;seat<4;seat++){
     const pid=pidForSeat(seat);if(!pid)continue;
-    const tm=team(seat);
-    gs.sessionScores[pid]=(gs.sessionScores[pid]||0)+result.scores[tm];
+    gs.sessionScores[pid]=(gs.sessionScores[pid]||0)+result.scores[team(seat)];
   }
   fbPatch('/lobby',{sessionScores:gs.sessionScores});
   gs.phase='ended';
@@ -1109,74 +1113,52 @@ function endRound(){
 
 function hostNextRound(){
   const roundInSet=(gs.roundInSet||1);
-  // Check if we need the "continue?" prompt (every 4 rounds)
   if(roundInSet>=4){
     gs.phase='continue_vote';
     fbSet('/continueVotes',null);
-    broadcast();
-    return;
+    broadcast();return;
   }
   const d=(gs.dealer+1)%4;
   const sc={...gs.scores};const seats=gs.seats;const ss={...gs.sessionScores};
   const newGs=mkState(d,seats,sc);
-  newGs.sessionScores=ss;
-  newGs.roundInSet=roundInSet+1;
-  newGs.setNumber=gs.setNumber||1;
-  gs=newGs;
-  broadcast();
+  newGs.sessionScores=ss;newGs.roundInSet=roundInSet+1;newGs.setNumber=gs.setNumber||1;
+  gs=newGs;broadcast();
 }
 
 async function broadcast(){if(!isHost)return;await fbSet('/game',gs);renderGame();}
 
 // ════════════════════════════════════════════════
-// CONTINUE VOTING (every 4 rounds)
+// CONTINUE VOTING
 // ════════════════════════════════════════════════
 async function voteContinue(yes){
   await fbPatch('/continueVotes',{[ME]:yes});
-  document.getElementById('ov-continue').style.display='none';
-  // Host checks all votes
+  closeOverlay('ov-continue');
   if(isHost)checkContinueVotes();
 }
 
 async function checkContinueVotes(){
-  const votes=await fbGet('/continueVotes');
-  if(!votes)return;
+  const votes=await fbGet('/continueVotes');if(!votes)return;
   const playing=Object.entries(lobby.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
-  const allVoted=playing.every(id=>votes[id]!==undefined);
-  if(!allVoted)return;
-  const allYes=playing.every(id=>votes[id]===true);
-  if(allYes){
-    // Continue! New set of 4 rounds
-    pushChat('Spel','Iedereen wil doorgaan! Nieuwe set van 4 ronden!');
-    const d=(gs.dealer+1)%4;
-    const sc={...gs.scores};const seats=gs.seats;const ss={...gs.sessionScores};
+  if(!playing.every(id=>votes[id]!==undefined))return;
+  if(playing.every(id=>votes[id]===true)){
+    pushChat('Spel','Iedereen wil doorgaan! Nieuwe set!');
+    const d=(gs.dealer+1)%4;const sc={...gs.scores};const seats=gs.seats;const ss={...gs.sessionScores};
     gs=mkState(d,seats,sc);gs.sessionScores=ss;gs.setNumber=(gs.setNumber||1)+1;
-    await fbSet('/continueVotes',null);
-    broadcast();
+    await fbSet('/continueVotes',null);broadcast();
   }else{
-    // Someone said no — check if 5th player wants to swap in
     const noVoters=playing.filter(id=>votes[id]===false);
-    const waitingPlayers=Object.entries(lobby.players||{}).filter(([,s])=>s==='waiting').map(([id])=>id);
-    if(waitingPlayers.length>0&&noVoters.length>0){
-      // Auto-swap: first "no" voter swaps with first waiting player
+    const waiters=Object.entries(lobby.players||{}).filter(([,s])=>s==='waiting').map(([id])=>id);
+    if(waiters.length>0&&noVoters.length>0){
       for(const leaver of noVoters){
-        if(waitingPlayers.length===0)break;
-        const joiner=waitingPlayers.shift();
-        await performSwap(leaver,joiner);
+        if(!waiters.length)break;
+        await performSwap(leaver,waiters.shift());
       }
-      // Reset scores and continue
-      const d=(gs.dealer+1)%4;
-      gs=mkState(d,lobby.seats||{});
-      gs.setNumber=1;
-      pushChat('Spel','Nieuwe spelers! Scores gereset. Nieuwe set!');
-      await fbSet('/continueVotes',null);
-      broadcast();
+      gs=mkState(0,lobby.seats||{});gs.setNumber=1;
+      pushChat('Spel','Nieuwe spelers! Scores gereset!');
+      await fbSet('/continueVotes',null);broadcast();
     }else{
-      // Game over — but keep video
-      pushChat('Spel','Spel afgelopen! Blijf gerust kletsen via video.');
-      gs.phase='game_over';
-      await fbSet('/continueVotes',null);
-      broadcast();
+      pushChat('Spel','Spel afgelopen! Blijf kletsen.');
+      gs.phase='game_over';await fbSet('/continueVotes',null);broadcast();
     }
   }
 }
@@ -1184,19 +1166,14 @@ async function checkContinueVotes(){
 function renderContinueVotes(votes){
   if(!gs||gs.phase!=='continue_vote')return;
   document.getElementById('ov-continue').style.display='flex';
-  const vDiv=document.getElementById('continue-votes');
   const playing=Object.entries(lobby?.players||{}).filter(([,s])=>s==='playing').map(([id])=>id);
-  vDiv.innerHTML=playing.map(id=>{
-    const v=votes&&votes[id];
+  document.getElementById('continue-votes').innerHTML=playing.map(id=>{
+    const v=votes?.[id];
     const cls=v===true?'vote-yes':v===false?'vote-no':'vote-pending';
     const txt=v===true?'Ja':v===false?'Nee':'...';
     return `<span class="vote-chip ${cls}">${nameOf(id)}: ${txt}</span>`;
   }).join('');
-  // Host auto-check
-  if(isHost&&votes){
-    const allVoted=playing.every(id=>votes[id]!==undefined);
-    if(allVoted)setTimeout(()=>checkContinueVotes(),500);
-  }
+  if(isHost&&votes&&playing.every(id=>votes[id]!==undefined))setTimeout(checkContinueVotes,500);
 }
 
 // ════════════════════════════════════════════════
@@ -1206,316 +1183,57 @@ function requestSwap(){
   const players=lobby?.players||{};
   const myStatus=players[ME];
   const div=document.getElementById('swap-players');div.innerHTML='';
-  if(myStatus==='playing'){
-    // Show waiting players I can swap with
-    const waiting=Object.entries(players).filter(([,s])=>s==='waiting').map(([id])=>id);
-    for(const id of waiting){
-      const row=document.createElement('div');row.className='swap-row';
-      row.innerHTML=`<div class="swap-name">${PHOTOS[id]?`<img src="${PHOTOS[id]}">`:''}<span>${nameOf(id)}</span></div>
-        <button class="swap-btn" onclick="sendSwapRequest('${id}')">Wissel</button>`;
-      div.appendChild(row);
-    }
-  }else if(myStatus==='waiting'){
-    // Show playing players I can swap with
-    const playing=Object.entries(players).filter(([,s])=>s==='playing').map(([id])=>id);
-    for(const id of playing){
-      const row=document.createElement('div');row.className='swap-row';
-      row.innerHTML=`<div class="swap-name">${PHOTOS[id]?`<img src="${PHOTOS[id]}">`:''}<span>${nameOf(id)}</span></div>
-        <button class="swap-btn" onclick="sendSwapRequest('${id}')">Wissel</button>`;
-      div.appendChild(row);
-    }
+  const targets=myStatus==='playing'
+    ?Object.entries(players).filter(([,s])=>s==='waiting').map(([id])=>id)
+    :Object.entries(players).filter(([,s])=>s==='playing').map(([id])=>id);
+  for(const id of targets){
+    const row=document.createElement('div');row.className='swap-row';
+    row.innerHTML=`<div class="swap-name">${PHOTOS[id]?`<img src="${PHOTOS[id]}">`:''}<span>${nameOf(id)}</span></div>
+      <button class="swap-btn" onclick="sendSwapRequest('${id}')">Wissel</button>`;
+    div.appendChild(row);
   }
   document.getElementById('ov-swap').style.display='flex';
 }
-function closeSwap(){document.getElementById('ov-swap').style.display='none';}
 
 async function sendSwapRequest(targetId){
-  closeSwap();
+  closeOverlay('ov-swap');
   await fbSet('/swapRequest',{from:ME,to:targetId,ts:Date.now()});
   pushChat('Spel',nameOf(ME)+' wil wisselen met '+nameOf(targetId));
 }
 
 function handleSwapRequest(req){
-  if(!req||!req.from||!req.to)return;
-  if(req.to===ME){
-    pendingSwap=req;
-    document.getElementById('swap-request-msg').textContent=
-      nameOf(req.from)+' wil met je wisselen. Akkoord?';
-    document.getElementById('ov-swap-request').style.display='flex';
-  }
+  if(!req||!req.from||!req.to||req.to!==ME)return;
+  pendingSwap=req;
+  document.getElementById('swap-request-msg').textContent=nameOf(req.from)+' wil met je wisselen. Akkoord?';
+  document.getElementById('ov-swap-request').style.display='flex';
 }
 
 async function acceptSwap(){
-  document.getElementById('ov-swap-request').style.display='none';
+  closeOverlay('ov-swap-request');
   if(!pendingSwap)return;
-  const{from,to}=pendingSwap;
-  pendingSwap=null;
-  // Perform the swap as host or via action
+  const{from,to}=pendingSwap;pendingSwap=null;
   await performSwap(from,to);
-  // Reset scores and shuffle teams
-  const d=0;
-  gs=mkState(d,lobby.seats||{});gs.setNumber=1;
+  gs=mkState(0,lobby.seats||{});gs.setNumber=1;
   pushChat('Spel',nameOf(from)+' en '+nameOf(to)+' gewisseld! Scores gereset, teams gemixt!');
   await fbSet('/swapRequest',null);
-  if(isHost)broadcast();
-  else await fbSet('/game',gs);
+  if(isHost)broadcast();else await fbSet('/game',gs);
 }
 
 async function declineSwap(){
-  document.getElementById('ov-swap-request').style.display='none';
-  pendingSwap=null;
+  closeOverlay('ov-swap-request');pendingSwap=null;
   pushChat('Spel','Wissel geweigerd.');
   await fbSet('/swapRequest',null);
 }
 
 async function performSwap(leaverId,joinerId){
-  // Swap: leaver goes to waiting, joiner gets leaver's seat
   const leaverSeat=lobby.seats?.[leaverId];
-  // Update lobby
   await fbPatch('/lobby/players',{[leaverId]:'waiting',[joinerId]:'playing'});
-  const newSeats={...lobby.seats};
-  delete newSeats[leaverId];
-  newSeats[joinerId]=leaverSeat;
-  await fbPatch('/lobby',{seats:newSeats});
-  // Shuffle teams: randomize seat assignments for the 4 playing players
   const playingIds=Object.entries(lobby.players||{})
     .filter(([id,s])=>(s==='playing'&&id!==leaverId)||id===joinerId).map(([id])=>id);
   const shuffled=[...playingIds].sort(()=>Math.random()-.5);
-  const freshSeats={};
-  shuffled.forEach((id,i)=>freshSeats[id]=i);
+  const freshSeats={};shuffled.forEach((id,i)=>freshSeats[id]=i);
   await fbPatch('/lobby',{seats:freshSeats,sessionScores:{}});
   seatMap=freshSeats;mySeat=freshSeats[ME]??-1;
-}
-
-// ════════════════════════════════════════════════
-// VIDEO — WebRTC with Firebase signaling
-// ════════════════════════════════════════════════
-const ICE=[
-  {urls:'stun:stun.l.google.com:19302'},
-  {urls:'stun:stun1.l.google.com:19302'},
-  {urls:'stun:stun2.l.google.com:19302'},
-  // Free TURN server for better NAT traversal
-  {urls:'turn:global.relay.metered.ca:80',username:'open',credential:'open'},
-  {urls:'turn:global.relay.metered.ca:443',username:'open',credential:'open'},
-  {urls:'turn:global.relay.metered.ca:443?transport=tcp',username:'open',credential:'open'}
-];
-
-function sigKey(a,b){return a<b?a+'__'+b:b+'__'+a;}
-function isCaller(other){return ME<other;}
-
-async function getLocalStream(){
-  if(myStream)return myStream;
-  if(_gettingStream)return _gettingStream;
-  _gettingStream=(async()=>{
-    try{myStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:320},height:{ideal:240}},audio:{echoCancellation:true,noiseSuppression:true}});}
-    catch(e){
-      try{myStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});}
-      catch(e2){myStream=null;}
-    }
-    _gettingStream=null;
-    return myStream;
-  })();
-  return _gettingStream;
-}
-
-// Initialize video for lobby (get camera + connect)
-async function initVideoForLobby(){
-  debugMsg('initVideoForLobby: getting camera...');
-  await getLocalStream();
-  debugMsg('initVideoForLobby: camera '+(myStream?'OK':'FAILED'));
-  showSelfVideo();
-  connectVideoToAll();
-}
-
-function showSelfVideo(){
-  const vid=document.querySelector('#vbox-0 video');
-  if(vid&&myStream){vid.srcObject=myStream;vid.muted=true;vid.play().catch(()=>{});
-    const fb=document.getElementById('vfb-0');if(fb)fb.style.display='none';}
-}
-
-async function connectVideoToAll(){
-  if(!ME||!myStream)return;
-  // Get all online players (from lobby if active, otherwise from presence)
-  const allPlayers=[];
-  if(lobby?.players){
-    for(const[id,status]of Object.entries(lobby.players)){
-      if(id!==ME&&(status==='playing'||status==='waiting'))allPlayers.push(id);
-    }
-  }
-  // Also connect to any online player detected via presence (pre-lobby)
-  const now=Date.now();
-  for(const p of ROSTER){
-    if(p.id===ME||allPlayers.includes(p.id))continue;
-    const pr=presence[p.id];
-    if(pr&&pr.online&&(now-pr.ts)<45000)allPlayers.push(p.id);
-  }
-  debugMsg('connectVideoToAll: peers='+allPlayers.join(','));
-  // Connect to each one we're not already connected to
-  for(const otherId of allPlayers){
-    if(peerConns[otherId]){
-      const state=peerConns[otherId].connectionState||peerConns[otherId].iceConnectionState;
-      debugMsg('peer '+otherId+' state='+state);
-      if(state==='connected'||state==='completed')continue;
-      if(state==='failed'||state==='closed'||state==='disconnected'){
-        peerConns[otherId].close();
-        delete peerConns[otherId];
-        delete remoteStreams[otherId];
-      }else continue;
-    }
-    if(isCaller(otherId)){
-      debugMsg('I am caller for '+otherId+', scheduling call...');
-      setTimeout(()=>callPlayer(otherId),300+Math.random()*600);
-    }else{
-      debugMsg('I am answerer for '+otherId+', waiting for offer...');
-    }
-  }
-}
-
-async function callPlayer(otherId){
-  if(peerConns[otherId]||pendingPeers.has(otherId))return;
-  pendingPeers.add(otherId);
-  try{
-    debugMsg('callPlayer '+otherId+': creating offer...');
-    const key=sigKey(ME,otherId);
-    await fbDel('/sig/'+key);
-    const pc=new RTCPeerConnection({iceServers:ICE});
-    peerConns[otherId]=pc;
-    setupPeerHandlers(pc,otherId);
-    if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
-    const candidates=[];
-    pc.onicecandidate=e=>{if(e.candidate)candidates.push(e.candidate.toJSON());};
-    const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
-    await pc.setLocalDescription(offer);
-    await new Promise(r=>{
-      if(pc.iceGatheringState==='complete'){r();return;}
-      const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
-      pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
-    });
-    debugMsg('callPlayer '+otherId+': offer ready, '+candidates.length+' ICE candidates, writing to Firebase...');
-    await fbSet('/sig/'+key+'/offer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
-    debugMsg('callPlayer '+otherId+': offer sent!');
-  }catch(e){debugMsg('callPlayer FAILED: '+otherId+' '+e.message);delete peerConns[otherId];}
-  finally{pendingPeers.delete(otherId);}
-}
-
-async function answerCall(otherId,offerData){
-  if(peerConns[otherId]||pendingPeers.has(otherId))return;
-  pendingPeers.add(otherId);
-  try{
-    debugMsg('answerCall '+otherId+': answering...');
-    if(!myStream)await getLocalStream();
-    const pc=new RTCPeerConnection({iceServers:ICE});
-    peerConns[otherId]=pc;
-    setupPeerHandlers(pc,otherId);
-    if(myStream)myStream.getTracks().forEach(t=>pc.addTrack(t,myStream));
-    await pc.setRemoteDescription(new RTCSessionDescription({sdp:offerData.sdp,type:offerData.type}));
-    if(offerData.candidates){
-      for(const c of offerData.candidates){
-        try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
-      }
-    }
-    const candidates=[];
-    pc.onicecandidate=e=>{if(e.candidate)candidates.push(e.candidate.toJSON());};
-    const answer=await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await new Promise(r=>{
-      if(pc.iceGatheringState==='complete'){r();return;}
-      const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);r();}};
-      pc.addEventListener('icegatheringstatechange',f);setTimeout(r,4000);
-    });
-    const key=sigKey(ME,otherId);
-    debugMsg('answerCall '+otherId+': answer ready, '+candidates.length+' ICE, writing...');
-    await fbSet('/sig/'+key+'/answer',{sdp:pc.localDescription.sdp,type:pc.localDescription.type,from:ME,candidates});
-    debugMsg('answerCall '+otherId+': answer sent!');
-  }catch(e){debugMsg('answerCall FAILED: '+otherId+' '+e.message);delete peerConns[otherId];}
-  finally{pendingPeers.delete(otherId);}
-}
-
-function setupPeerHandlers(pc,otherId){
-  pc.ontrack=e=>{debugMsg('ontrack from '+otherId+'!');remoteStreams[otherId]=e.streams[0];setRemoteVideo(otherId,e.streams[0]);};
-  pc.onconnectionstatechange=()=>{
-    const s=pc.connectionState;debugMsg('peer '+otherId+' → '+s);
-    if(s==='disconnected'||s==='failed'||s==='closed'){
-      // Only clean up if this is still the active connection (not an orphaned one)
-      if(peerConns[otherId]===pc){
-        delete peerConns[otherId];delete remoteStreams[otherId];
-        setTimeout(()=>{if(ME)connectVideoToAll();},2000);
-      }else{try{pc.close();}catch(e){}}
-    }
-  };
-}
-
-async function processSigData(sig){
-  if(!ME||!sig)return;
-  for(const[key,pair]of Object.entries(sig)){
-    if(!pair||!key.includes('__'))continue;
-    const parts=key.split('__');
-    if(!parts.includes(ME))continue;
-    const otherId=parts[0]===ME?parts[1]:parts[0];
-    if(pair.offer&&pair.offer.from===otherId&&pair.offer.sdp){
-      if(!peerConns[otherId]&&!pendingPeers.has(otherId)&&!isCaller(otherId)){
-        debugMsg('processSig: got offer from '+otherId+', answering...');
-        await answerCall(otherId,pair.offer);
-      }
-    }
-    if(pair.answer&&pair.answer.from===otherId&&peerConns[otherId]&&!peerConns[otherId]._gotAnswer&&isCaller(otherId)){
-      debugMsg('processSig: got answer from '+otherId);
-      peerConns[otherId]._gotAnswer=true;
-      await peerConns[otherId].setRemoteDescription(new RTCSessionDescription({sdp:pair.answer.sdp,type:pair.answer.type}));
-      if(pair.answer.candidates){
-        for(const c of pair.answer.candidates){
-          try{await peerConns[otherId].addIceCandidate(new RTCIceCandidate(c));}catch(e){}
-        }
-      }
-    }
-  }
-}
-
-async function initVideo(){
-  // Only request camera when 2+ players are in lobby (avoids triggering Zoom notetaker etc.)
-  const lobbyPlayers=Object.keys(lobby?.players||{});
-  if(lobbyPlayers.length>=2){
-    await getLocalStream();
-    showSelfVideo();
-  }
-  // Re-apply any remote streams that were connected before the game screen opened
-  for(const[id,stream]of Object.entries(remoteStreams)){setRemoteVideo(id,stream);}
-  // Connect to new peers
-  if(myStream)connectVideoToAll();
-}
-
-function setRemoteVideo(playerId,stream){
-  const slot=visualSlot(playerId);
-  debugMsg('setRemoteVideo '+playerId+' → slot '+slot);
-  if(slot<0)return;
-  const vid=document.querySelector(`#vbox-${slot} video`);
-  const fb=document.getElementById('vfb-'+slot);
-  if(vid){
-    vid.srcObject=stream;
-    vid.muted=true; // start muted so autoplay works on mobile
-    vid.play().catch(()=>{});
-    if(fb)fb.style.display='none';
-  }
-}
-// Unmute all remote videos (called from user gesture)
-function unmuteAll(){
-  for(let i=1;i<5;i++){
-    const vid=document.querySelector('#vbox-'+i+' video');
-    if(vid&&vid.srcObject)vid.muted=false;
-  }
-  const btn=document.getElementById('unmute-btn');
-  if(btn)btn.style.display='none';
-  debugMsg('Audio unmuted');
-}
-
-function visualSlot(pid){
-  if(pid===ME)return 0;
-  // For playing members: relative to my seat
-  const s=seatMap[pid];
-  if(s!==undefined&&s>=0&&mySeat>=0)return(s-mySeat+4)%4;
-  // For waiting members: slot 4
-  if(lobby?.players?.[pid]==='waiting')return 4;
-  return -1;
 }
 
 // ════════════════════════════════════════════════
@@ -1524,47 +1242,16 @@ function visualSlot(pid){
 async function showGame(){
   document.getElementById('screen-login').style.display='none';
   document.getElementById('screen-game').style.display='grid';
-  document.getElementById('ov-waiting').style.display='none';
-  isWaiting=false;
   if(lobby){seatMap=lobby.seats||{};mySeat=seatMap[ME]??-1;}
+  const myStatus=lobby?.players?.[ME];
+  isWaiting=myStatus==='waiting';
+  document.getElementById('ov-waiting').style.display=isWaiting?'flex':'none';
   checkHost();
-  buildVideoStrip();
-  await initVideo();
+  // Start video
+  const lobbyCount=Object.keys(lobby?.players||{}).length;
+  if(lobbyCount>=2&&!jitsiApi)startJitsi();
   if(gs&&gs.phase&&gs.phase!=='ended')renderGame();
   else updateWaitingUI();
-}
-
-// ════════════════════════════════════════════════
-// VIDEO STRIP — 5 slots (4 players + 1 waiting)
-// ════════════════════════════════════════════════
-function buildVideoStrip(){
-  const strip=document.getElementById('video-strip');strip.innerHTML='';
-  // 4 player slots + 1 for 5th person (waiting)
-  for(let slot=0;slot<5;slot++){
-    let pid,realSeat,isWaitingSlot=false;
-    if(slot<4){
-      realSeat=slot===0?mySeat:(mySeat+slot)%4;
-      pid=pidForSeat(realSeat);
-    }else{
-      // 5th slot: waiting player
-      const waiters=Object.entries(lobby?.players||{}).filter(([,s])=>s==='waiting').map(([id])=>id);
-      pid=waiters[0]||null;
-      isWaitingSlot=true;
-    }
-    const p=pid?ROSTER.find(r=>r.id===pid):null;
-    const teamLbl=isWaitingSlot?'Wacht':(realSeat%2===0?'N-Z':'O-W');
-    const teamCls=isWaitingSlot?'t-wait':(realSeat%2===0?'t-ns':'t-ew');
-    const div=document.createElement('div');div.className='vbox';div.id='vbox-'+slot;
-    div.innerHTML=`<video autoplay muted playsinline></video>
-      <div class="vfb" id="vfb-${slot}">
-        ${p?`<img src="${PHOTOS[p.id]}" alt="${p.name}"><span class="vfb-name">${p.name}</span>`:'<span style="color:rgba(245,234,208,.2);font-size:.65em">'+(isWaitingSlot?'Wachtkamer':'Leeg')+'</span>'}
-      </div>
-      <div class="vid-name">${p?p.name:(isWaitingSlot?'Wachtkamer':'Leeg')}</div>
-      <div class="vid-team ${teamCls}">${teamLbl}</div>
-      ${isWaitingSlot?'<div class="vid-badge">5e speler</div>':''}
-      <div class="vid-ring"></div>`;
-    strip.appendChild(div);
-  }
 }
 
 // ════════════════════════════════════════════════
@@ -1580,13 +1267,13 @@ function renderGame(){
   // Scores
   document.getElementById('sc-ns').textContent=gs.scores?.['02']||0;
   document.getElementById('sc-ew').textContent=gs.scores?.['13']||0;
-  // Trump display
+  // Trump
   const ts=document.getElementById('trump-sym');
   ts.textContent=gs.trump||'?';
   ts.style.color=(gs.trump==='♥'||gs.trump==='♦')?'var(--red)':'var(--cream)';
-  const bidderEl=document.getElementById('trump-bidder');
-  bidderEl.textContent=gs.bidder!==null&&gs.bidder!==undefined?nameForSeat(gs.bidder):'';
-  // Roem display
+  document.getElementById('trump-bidder').textContent=
+    gs.bidder!==null&&gs.bidder!==undefined?nameForSeat(gs.bidder):'';
+  // Roem
   const rBox=document.getElementById('roem-box');
   if(gs.roundRoem&&(gs.roundRoem['02']>0||gs.roundRoem['13']>0)){
     rBox.style.display='block';
@@ -1599,36 +1286,51 @@ function renderGame(){
   document.getElementById('tricks-won').textContent=`Slagen: N-Z ${tNS} | O-W ${tEW}`;
   // Round info
   document.getElementById('round-info').textContent=`Ronde ${gs.roundInSet||1}/4 (Set ${gs.setNumber||1})`;
-  // Lead suit indicator
+  // Running points
+  const rpDiv=document.getElementById('running-pts');
+  if(gs.phase==='playing'&&gs.doneTricks?.length>0){
+    rpDiv.style.display='flex';
+    let nsP=0,ewP=0;
+    for(let i=0;i<gs.doneTricks.length;i++){
+      const t=gs.doneTricks[i];let tp=0;
+      for(const{card}of t.cards)tp+=cPts(card,gs.trump);
+      if(i===7)tp+=10;
+      if(team(t.winner)==='02')nsP+=tp;else ewP+=tp;
+    }
+    document.getElementById('rp-ns').textContent=nsP+(gs.roundRoem?.['02']||0);
+    document.getElementById('rp-ew').textContent=ewP+(gs.roundRoem?.['13']||0);
+  }else rpDiv.style.display='none';
+  // Lead suit
   const leadEl=document.getElementById('lead-suit');
-  if(gs.trick&&gs.trick.length>0){
+  if(gs.trick?.length>0){
     leadEl.textContent=gs.trick[0].card.s;
-    leadEl.style.color=(gs.trick[0].card.s==='♥'||gs.trick[0].card.s==='♦')?'rgba(176,32,32,.12)':'rgba(245,234,208,.08)';
+    leadEl.style.color=(gs.trick[0].card.s==='♥'||gs.trick[0].card.s==='♦')?'rgba(176,32,32,.15)':'rgba(245,234,208,.1)';
   }else leadEl.textContent='';
   // Session scoreboard
   if(gs.sessionScores&&Object.keys(gs.sessionScores).length>0){
-    const sb=document.getElementById('game-sb');sb.style.display='block';
+    document.getElementById('game-sb').style.display='block';
     document.getElementById('gsb-rows').innerHTML=
       Object.entries(gs.sessionScores).sort((a,b)=>b[1]-a[1])
         .map(([pid,pts])=>`<div class="gsb-row"><span>${nameOf(pid)}</span><span class="gsb-pts">${pts}</span></div>`).join('');
   }
   renderPlayerTags();renderHands();renderTrick();renderTurnBar();renderBid();renderRoundEnd();
-  if(gs.cur>=0)highlightVideo(gs.cur);
-  // Continue vote
   if(gs.phase==='continue_vote')document.getElementById('ov-continue').style.display='flex';
 }
 
 function renderPlayerTags(){
-  const slots=[[0,mySeat,'pt-s','tag-s'],[2,(mySeat+2)%4,'pt-n','tag-n'],[3,(mySeat+3)%4,'pt-w','tag-w'],[1,(mySeat+1)%4,'pt-e','tag-e']];
-  for(const[,seat,,id]of slots){
+  const ms=mySeat>=0?mySeat:0;
+  const slots=[[0,ms,'tag-s'],[2,(ms+2)%4,'tag-n'],[3,(ms+3)%4,'tag-w'],[1,(ms+1)%4,'tag-e']];
+  const posClasses=['pt-s','pt-n','pt-w','pt-e'];
+  for(let i=0;i<slots.length;i++){
+    const[,seat,id]=slots[i];
     const el=document.getElementById(id);if(!el)continue;
     const nm=nameForSeat(seat);const ph=photoForSeat(seat);
     const isDlr=gs&&Number(seat)===Number(gs.dealer);
     const isBid=gs&&Number(seat)===Number(gs.bidder);
-    el.className='ptag '+['pt-s','pt-n','pt-w','pt-e'][slots.find(s=>s[3]===id)?.[0]||0]
-      +(isDlr?' dealer':'')+(isBid?' bidder':'');
+    const isCur=gs&&Number(seat)===Number(gs.cur)&&(gs.phase==='playing'||gs.phase==='playing_bidding');
+    el.className='ptag '+posClasses[i]+(isDlr?' dealer':'')+(isBid?' bidder':'')+(isCur?' active-turn':'');
     el.innerHTML=(ph?`<img src="${ph}" alt="${nm}">`:'')+nm
-      +(isDlr?' (D)':'')+(isBid?' &#9733;':'');
+      +(isDlr?' (D)':'')+(isBid?' ★':'')+(isCur?' ◄':'');
   }
 }
 
@@ -1643,11 +1345,18 @@ function cardEl(c,clickable,isTrump){
 function backEl(){const d=document.createElement('div');d.className='card-back';return d;}
 
 function renderHands(){
-  if(!gs||mySeat<0)return;
+  if(!gs)return;
+  if(mySeat<0){
+    // Spectator: show backs
+    for(const sid of['hand-s','hand-n','hand-w','hand-e']){
+      const el=document.getElementById(sid);el.innerHTML='';
+      for(let i=0;i<8-(gs.trickNo||0);i++)el.appendChild(backEl());
+    }
+    return;
+  }
   const myHand=gs.hands[mySeat]||[];
   const isPlaying=gs.phase==='playing'&&Number(gs.cur)===mySeat;
   const valid=isPlaying?validCards(myHand,gs.trick,gs.trump,mySeat):[];
-  // Sort hand by suit then rank
   const sortedHand=[...myHand].sort((a,b)=>{
     if(a.s===gs.trump&&b.s!==gs.trump)return -1;
     if(b.s===gs.trump&&a.s!==gs.trump)return 1;
@@ -1669,23 +1378,27 @@ function renderHands(){
 
 function renderTrick(){
   const z=document.getElementById('trick-zone');z.innerHTML='';
-  if(!gs||!gs.trick||!gs.trick.length)return;
+  if(!gs?.trick?.length)return;
+  const ms=mySeat>=0?mySeat:0;
   for(const{seat,card}of gs.trick){
-    const vslot=(Number(seat)-mySeat+4)%4;
+    const vslot=(Number(seat)-ms+4)%4;
     const area=['ts','te','tn','tw'][vslot];
     const w=document.createElement('div');w.className='tc '+area;
-    w.appendChild(cardEl(card,false,card.s===gs.trump));z.appendChild(w);
+    w.appendChild(cardEl(card,false,card.s===gs.trump));
+    const nm=document.createElement('div');nm.className='tc-name';nm.textContent=nameForSeat(seat);
+    w.appendChild(nm);
+    z.appendChild(w);
   }
 }
 
 function renderTurnBar(){
   const bar=document.getElementById('turn-bar');if(!gs)return;
-  const myTurn=Number(gs.cur)===mySeat;
+  const myTurn=mySeat>=0&&Number(gs.cur)===mySeat;
   if(gs.phase==='playing_bidding'){
     bar.textContent=myTurn?'Jouw beurt: kies troef of pas':nameForSeat(gs.cur)+' kiest...';
     bar.style.borderColor=myTurn?'var(--gold)':'rgba(201,168,76,.3)';
   }else if(gs.phase==='playing'){
-    bar.textContent=myTurn?'Jouw beurt - speel een kaart!':nameForSeat(gs.cur)+' speelt...';
+    bar.textContent=myTurn?'Jouw beurt — speel een kaart!':nameForSeat(gs.cur)+' speelt...';
     bar.style.borderColor=myTurn?'var(--gold)':'rgba(201,168,76,.3)';
   }else if(gs.phase==='continue_vote'){
     bar.textContent='Nog 4 ronden? Stem!';
@@ -1696,23 +1409,21 @@ function renderTurnBar(){
 
 function renderBid(){
   const ov=document.getElementById('ov-bid');
-  if(!gs||gs.phase!=='playing_bidding'||Number(gs.cur)!==mySeat){ov.style.display='none';return;}
+  if(!gs||gs.phase!=='playing_bidding'||mySeat<0||Number(gs.cur)!==mySeat){ov.style.display='none';return;}
   ov.style.display='flex';
   const passes=gs.bidPasses||0;
   document.getElementById('bid-desc').textContent=
-    passes===0?'Jij opent het bieden.':passes<3?`${passes} speler(s) gepast.`:'Iedereen gepast - jij MOET kiezen!';
+    passes===0?'Jij opent het bieden.':passes<3?`${passes} speler(s) gepast.`:'Drie keer gepast — jij MOET troef kiezen!';
   document.getElementById('pass-btn').style.display=passes>=3?'none':'block';
   const preview=document.getElementById('bid-hand-preview');preview.innerHTML='';
-  const myHand=gs.hands[mySeat]||[];
-  for(const c of myHand)preview.appendChild(cardEl(c,false,false));
+  for(const c of(gs.hands[mySeat]||[]))preview.appendChild(cardEl(c,false,false));
 }
 
 function renderRoundEnd(){
   const ov=document.getElementById('ov-round');
   if(!gs||gs.phase!=='ended'){ov.style.display='none';return;}
   ov.style.display='flex';
-  const r=gs.roundResult;
-  if(!r)return;
+  const r=gs.roundResult;if(!r)return;
   const bt=team(gs.bidder),ot=bt==='02'?'13':'02';
   const bStr=bt==='02'?'Noord-Zuid':'Oost-West',oStr=bt==='02'?'Oost-West':'Noord-Zuid';
   const t=document.getElementById('round-title');
@@ -1731,16 +1442,9 @@ function renderRoundEnd(){
   document.getElementById('round-total').textContent=totalText;
 }
 
-function highlightVideo(seat){
-  for(let slot=0;slot<5;slot++){
-    const b=document.getElementById('vbox-'+slot);
-    if(b)b.classList.toggle('active',(Number(seat)-mySeat+4)%4===slot);
-  }
-}
-
 function renderSessionScoreboard(ss){
   if(!ss||!Object.keys(ss).length)return;
-  const sb=document.getElementById('session-scoreboard');sb.style.display='block';
+  document.getElementById('session-scoreboard').style.display='block';
   document.getElementById('sb-rows').innerHTML=
     Object.entries(ss).sort((a,b)=>b[1]-a[1])
       .map(([pid,pts])=>`<div class="sb-row"><span>${nameOf(pid)}</span><span class="sb-pts">${pts}</span></div>`).join('');
@@ -1750,11 +1454,11 @@ function renderSessionScoreboard(ss){
 // PLAYER ACTIONS
 // ════════════════════════════════════════════════
 function doBid(suit){
-  document.getElementById('ov-bid').style.display='none';
+  closeOverlay('ov-bid');
   sendAction(suit?{type:'bid',suit}:{type:'pass'});
 }
 function playCard(c){if(!gs||gs.phase!=='playing'||Number(gs.cur)!==mySeat)return;sendAction({type:'play',card:c});}
-function doNextRound(){document.getElementById('ov-round').style.display='none';sendAction({type:'nextRound'});}
+function doNextRound(){closeOverlay('ov-round');sendAction({type:'nextRound'});}
 
 // ════════════════════════════════════════════════
 // CHAT
@@ -1773,32 +1477,6 @@ function renderChatData(chatObj){
   }
 }
 function sendChat(){const inp=document.getElementById('chat-inp');const t=inp.value.trim();if(!t||!ME)return;pushChat(nameOf(ME),t);inp.value='';}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function debugMsg(msg){
-  console.log('[ZW]',msg);
-  const box=document.getElementById('chat-msgs');if(!box)return;
-  const d=document.createElement('div');d.className='cmsg cmsg-sys';
-  d.textContent='[dbg] '+msg;box.appendChild(d);box.scrollTop=box.scrollHeight;
-}
-
-// ════════════════════════════════════════════════
-// RESET
-// ════════════════════════════════════════════════
-async function resetGame(){
-  if(!ME)return;
-  if(!confirm('Spel resetten? Dit verwijdert het huidige spel voor iedereen.'))return;
-  await fbSet('/lobby',null);await fbSet('/game',null);
-  await fbSet('/actions',null);await fbSet('/sig',null);
-  await fbSet('/swapRequest',null);await fbSet('/continueVotes',null);
-  processedActions.clear();
-  isHost=false;mySeat=-1;gs=null;lobby=null;seatMap={};
-  returnToLobby();
-  setBar('Spel gereset. Start een nieuw spel!');
-  const gi=document.getElementById('ls-game-info');gi.style.display='block';
-  const btns=document.getElementById('ls-btns');btns.innerHTML='';
-  const b=document.createElement('button');b.className='btn-gold';b.textContent='Start een spel!';
-  b.onclick=startGame;btns.appendChild(b);
-}
 
 // ════════════════════════════════════════════════
 // BOOT
