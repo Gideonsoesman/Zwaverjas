@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>De Zwaverjas</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<script src="https://meet.jit.si/external_api.js"></script>
 <style>
 :root{--gold:#c9a84c;--gold-l:#e8c96e;--cream:#f5ead0;--red:#b02020;--wood:#0d0500;--felt:#1a4a2e;--green:#4ade80;--purple:#a855f7;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -830,59 +829,32 @@ function updateWaitingUI(){
 }
 
 // ════════════════════════════════════════════════
-// JITSI VIDEO — reliable, handles everything
+// JITSI VIDEO — simple iframe, no API needed
 // ════════════════════════════════════════════════
 function startJitsi(){
   if(jitsiApi)return;
-  // Create a deterministic room name so all players join the same room
   jitsiRoomName='zwaverjas'+(lobby?.startedAt||Date.now());
+  const container=document.getElementById('jitsi-container');
   const placeholder=document.getElementById('video-placeholder');
   if(placeholder)placeholder.remove();
-  try{
-    jitsiApi=new JitsiMeetExternalAPI('meet.jit.si',{
-      roomName:jitsiRoomName,
-      parentNode:document.getElementById('jitsi-container'),
-      width:'100%',
-      height:'100%',
-      userInfo:{displayName:nameOf(ME)},
-      configOverwrite:{
-        startWithAudioMuted:false,
-        startWithVideoMuted:false,
-        prejoinPageEnabled:false,
-        disableDeepLinking:true,
-        hideConferenceSubject:true,
-        hideConferenceTimer:true,
-        disableModeratorIndicator:true,
-        disableReactions:true,
-        disablePolls:true,
-        disableSelfViewSettings:true,
-        toolbarButtons:['microphone','camera','tileview','hangup','settings'],
-        notifications:[],
-        disableInviteFunctions:true,
-        enableClosePage:false,
-        filmstrip:{disableStageFilmstrip:true},
-      },
-      interfaceConfigOverwrite:{
-        DISABLE_JOIN_LEAVE_NOTIFICATIONS:true,
-        SHOW_CHROME_EXTENSION_BANNER:false,
-        MOBILE_APP_PROMO:false,
-        HIDE_INVITE_MORE_HEADER:true,
-        TOOLBAR_ALWAYS_VISIBLE:false,
-        TOOLBAR_TIMEOUT:3000,
-        filmStripOnly:false,
-        DEFAULT_BACKGROUND:'#080300',
-        DISABLE_VIDEO_BACKGROUND:true,
-      }
-    });
-    jitsiApi.addEventListener('videoConferenceLeft',()=>{
-      console.log('[ZW] Jitsi: left conference');
-    });
-    console.log('[ZW] Jitsi started: room='+jitsiRoomName);
-  }catch(e){
-    console.error('[ZW] Jitsi failed to start:',e);
-    document.getElementById('jitsi-container').innerHTML=
-      '<div class="video-placeholder">Video kon niet starten. Herlaad de pagina.</div>';
-  }
+  const cfg=encodeURIComponent(JSON.stringify({
+    startWithAudioMuted:false,startWithVideoMuted:false,
+    prejoinPageEnabled:false,disableDeepLinking:true,
+    hideConferenceSubject:true,hideConferenceTimer:true,
+    disableModeratorIndicator:true,disableReactions:true,
+    disablePolls:true,disableInviteFunctions:true,
+    toolbarButtons:['microphone','camera','hangup'],
+    notifications:[]
+  }));
+  const ifc=encodeURIComponent(JSON.stringify({
+    DISABLE_JOIN_LEAVE_NOTIFICATIONS:true,SHOW_CHROME_EXTENSION_BANNER:false,
+    MOBILE_APP_PROMO:false,HIDE_INVITE_MORE_HEADER:true
+  }));
+  const displayName=encodeURIComponent(nameOf(ME));
+  const url=`https://meet.jit.si/${jitsiRoomName}#config=${cfg}&interfaceConfig=${ifc}&userInfo.displayName=${displayName}`;
+  container.innerHTML=`<iframe src="${url}" allow="camera;microphone;display-capture;autoplay" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>`;
+  jitsiApi=true;
+  console.log('[ZW] Jitsi iframe started: room='+jitsiRoomName);
 }
 
 function stopJitsi(){
