@@ -822,7 +822,7 @@ function updateWaitingUI(){
 }
 
 // ════════════════════════════════════════════════
-// JITSI VIDEO — simple iframe, no API needed
+// VIDEO — opens in separate tab, always works
 // ════════════════════════════════════════════════
 function startJitsi(){
   if(jitsiApi)return;
@@ -830,24 +830,13 @@ function startJitsi(){
   const container=document.getElementById('jitsi-container');
   const placeholder=document.getElementById('video-placeholder');
   if(placeholder)placeholder.remove();
-  const cfg=encodeURIComponent(JSON.stringify({
-    startWithAudioMuted:false,startWithVideoMuted:false,
-    prejoinPageEnabled:false,disableDeepLinking:true,
-    hideConferenceSubject:true,hideConferenceTimer:true,
-    disableModeratorIndicator:true,disableReactions:true,
-    disablePolls:true,disableInviteFunctions:true,
-    toolbarButtons:['microphone','camera','hangup'],
-    notifications:[]
-  }));
-  const ifc=encodeURIComponent(JSON.stringify({
-    DISABLE_JOIN_LEAVE_NOTIFICATIONS:true,SHOW_CHROME_EXTENSION_BANNER:false,
-    MOBILE_APP_PROMO:false,HIDE_INVITE_MORE_HEADER:true
-  }));
-  const displayName=encodeURIComponent(nameOf(ME));
-  const url=`https://meet.jit.si/${jitsiRoomName}#config=${cfg}&interfaceConfig=${ifc}&userInfo.displayName=${displayName}`;
-  container.innerHTML=`<iframe src="${url}" allow="camera;microphone;display-capture;autoplay" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>`;
+  const url=`https://meet.jit.si/${jitsiRoomName}#config.prejoinPageEnabled=false&userInfo.displayName="${encodeURIComponent(nameOf(ME))}"`;
+  container.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;">
+    <a href="${url}" target="_blank" rel="noopener" style="background:var(--gold);color:#000;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:1.1em;">📹 Open Video Chat</a>
+    <span style="color:rgba(245,234,208,.4);font-size:.8em;">Opent in nieuw tabblad — iedereen ziet elkaar</span>
+  </div>`;
   jitsiApi=true;
-  console.log('[ZW] Jitsi iframe started: room='+jitsiRoomName);
+  console.log('[ZW] Video link ready: room='+jitsiRoomName);
 }
 
 function stopJitsi(){
